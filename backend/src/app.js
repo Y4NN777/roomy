@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
+const path = require('path');
 
 const routes = require('./routes');
 const errorHandler = require('./middleware/errorHandler');
@@ -32,6 +33,9 @@ if (process.env.NODE_ENV === 'development') {
   app.use(morgan('combined'));
 }
 
+// Static file serving for uploads
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
@@ -47,7 +51,7 @@ app.get('/health', (req, res) => {
 });
 
 // API routes
-// app.use('/api', routes);
+app.use('/api', routes);
 
 // Handle 404 routes
 app.use('*', (req, res) => {

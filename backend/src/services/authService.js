@@ -147,14 +147,32 @@ class AuthService {
 
   async getUserProfile(userId) {
     try {
-      // Remove the .populate() call until Group model is created
-      const user = await User.findById(userId);
+      const user = await User.findById(userId).populate({
+        path: 'groupId',
+        select: 'name inviteCode members statistics',
+        populate: {
+          path: 'members.userId',
+          select: 'name email profilePicture'
+        }
+      });
       
       if (!user || !user.isActive) {
         throw new Error('User not found');
       }
 
-      return user.toJSON();
+      const userProfile = user.toJSON();
+      
+      // Add user's role in the group if they're in one
+      if (userProfile.groupId && userProfile.groupId.members) {
+        const member = userProfile.groupId.members.find(
+          m => m.userId._id.toString() === userId
+        );
+        if (member) {
+          userProfile.role = member.role;
+        }
+      }
+
+      return userProfile;
     } catch (error) {
       logger.error('Get profile error:', error);
       throw error;

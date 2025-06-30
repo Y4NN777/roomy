@@ -86,7 +86,77 @@ const authSchemas = {
   }),
 };
 
+const groupSchemas = {
+  createGroup: Joi.object({
+    name: Joi.string()
+      .trim()
+      .min(2)
+      .max(100)
+      .required()
+      .messages({
+        'string.min': 'Group name must be at least 2 characters long',
+        'string.max': 'Group name cannot exceed 100 characters',
+        'any.required': 'Group name is required',
+      }),
+    
+    description: Joi.string()
+      .trim()
+      .max(500)
+      .optional()
+      .allow('')
+      .messages({
+        'string.max': 'Description cannot exceed 500 characters',
+      }),
+  }),
+
+  joinGroup: Joi.object({
+    inviteCode: Joi.string()
+      .trim()
+      .length(8)
+      .uppercase()
+      .required()
+      .messages({
+        'string.length': 'Invite code must be exactly 8 characters',
+        'any.required': 'Invite code is required',
+      }),
+  }),
+
+  updateGroup: Joi.object({
+    name: Joi.string()
+      .trim()
+      .min(2)
+      .max(100)
+      .optional(),
+    
+    description: Joi.string()
+      .trim()
+      .max(500)
+      .optional()
+      .allow(''),
+    
+    settings: Joi.object({
+      maxMembers: Joi.number()
+        .integer()
+        .min(2)
+        .max(20)
+        .optional(),
+      allowExpenses: Joi.boolean().optional(),
+      timezone: Joi.string().optional(),
+      autoAssignTasks: Joi.boolean().optional(),
+    }).optional(),
+  }),
+
+  transferAdmin: Joi.object({
+    newAdminId: Joi.string()
+      .required()
+      .messages({
+        'any.required': 'New admin ID is required',
+      }),
+  }),
+};
+
 module.exports = {
   validate,
   authSchemas,
+  groupSchemas,
 };

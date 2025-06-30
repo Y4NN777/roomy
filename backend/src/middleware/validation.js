@@ -153,6 +153,16 @@ const groupSchemas = {
         'any.required': 'New admin ID is required',
       }),
   }),
+
+  updateMemberRole: Joi.object({
+    role: Joi.string()
+      .valid('admin', 'member')
+      .required()
+      .messages({
+        'any.only': 'Role must be either admin or member',
+        'any.required': 'Role is required',
+      }),
+  })
 };
 
 module.exports = {

@@ -7,6 +7,25 @@ const { validate, groupSchemas } = require('../../middleware/validation');
 const router = express.Router();
 
 // Public routes (require authentication but no group membership)
+
+
+// Public/Discovery routes
+router.get('/', 
+  authenticateToken, 
+  groupController.getAllGroups
+);
+
+router.get('/search', 
+  authenticateToken, 
+  groupController.searchGroups
+);
+
+router.get('/my-groups', 
+  authenticateToken, 
+  groupController.getMyGroups
+);
+
+
 router.post('/', 
   authenticateToken, 
   validate(groupSchemas.createGroup), 
@@ -52,6 +71,12 @@ router.delete('/:groupId/members/:userId',
   groupController.removeMember
 );
 
+router.get('/:groupId/members',
+    authenticateToken, 
+    verifyGroupMembership,
+    groupController.getGroupMembers
+)
+
 router.patch('/:groupId/transfer-admin', 
   authenticateToken, 
   verifyGroupAdmin, 
@@ -63,6 +88,32 @@ router.post('/:groupId/regenerate-invite',
   authenticateToken, 
   verifyGroupAdmin, 
   groupController.regenerateInviteCode
+);
+
+
+// Group member routes (require group membership)
+router.get('/:groupId', 
+  authenticateToken, 
+  verifyGroupMembership, 
+  groupController.getGroup
+);
+
+router.get('/:groupId/members', 
+  authenticateToken, 
+  verifyGroupMembership, 
+  groupController.getGroupMembers
+);
+
+router.get('/:groupId/statistics', 
+  authenticateToken, 
+  verifyGroupMembership, 
+  groupController.getGroupStatistics
+);
+
+router.get('/:groupId/activity', 
+  authenticateToken, 
+  verifyGroupMembership, 
+  groupController.getGroupActivity
 );
 
 module.exports = router;

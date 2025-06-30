@@ -268,6 +268,285 @@ class GroupService {
       throw error;
     }
   }
+
+
+  async getAllGroups(requestingUserId, filters = {}) {
+    try {
+      // This could be admin-only or public discovery feature
+      const query = { isActive: true };
+      
+      // Apply filters
+      if (filters.search) {
+        query.$or = [
+          { name: { $regex: filters.search, $options: 'i' } },
+          { description: { $regex: filters.search, $options: 'i' } }
+        ];
+      }
+      
+      if (filters.maxMembers) {
+        query['members'] = { $size: { $lte: parseInt(filters.maxMembers) } };
+      }
+
+      const groups = await Group.find(query)
+        .select('name description members.length statistics createdAt')
+        .limit(filters.limit || 20)
+        .skip(filters.offset || 0)
+        .sort({ createdAt: -1 });
+
+      // Transform to hide sensitive info
+      const publicGroups = groups.map(group => ({
+        _id: group._id,
+        name: group.name,
+        description: group.description,
+        memberCount: group.members.length,
+        maxMembers: group.settings?.maxMembers || 10,
+        isAvailable: group.members.length < (group.settings?.maxMembers || 10),
+        createdAt: group.createdAt,
+        statistics: group.statistics
+      }));
+
+      return {
+        groups: publicGroups,
+        total: await Group.countDocuments(query),
+        hasMore: (filters.offset || 0) + publicGroups.length < await Group.countDocuments(query)
+      };
+    } catch (error) {
+      logger.error('Get all groups error:', error);
+      throw error;
+    }
+  }
+
+async getGroupMembers(groupId, requestingUserId, includeDetails = false) {
+try {
+    // Since verifyGroupMembership middleware already verified access,
+    // we can trust that the user is a member and just get the group
+    const group = await Group.findById(groupId).populate({
+    path: 'members.userId',
+    select: includeDetails 
+        ? 'name email profilePicture lastLoginAt preferences.theme createdAt'
+        : 'name email profilePicture'
+    });
+
+    if (!group || !group.isActive) {
+    throw new Error('Group not found');
+    }
+
+    // Get requesting member info (we know they exist due to middleware)
+    const requestingMember = group.findMember(requestingUserId);
+    console.log('Requesting Member:', requestingMember);
+    const isAdmin = requestingMember && requestingMember.role === CONSTANTS.USER_ROLES.ADMIN;
+
+    // Transform members data
+    const members = group.members.map(member => {
+    const memberData = {
+        userId: member.userId._id,
+        name: member.userId.name,
+        email: member.userId.email,
+        profilePicture: member.userId.profilePicture,
+        role: member.role,
+        joinedAt: member.joinedAt,
+        isOnline: member.userId.lastLoginAt && 
+                (new Date() - new Date(member.userId.lastLoginAt)) < 15 * 60 * 1000 // 15 minutes
+    };
+
+    // Add detailed info for admins or include details request
+    if (isAdmin || includeDetails) {
+        memberData.lastLoginAt = member.userId.lastLoginAt;
+        memberData.theme = member.userId.preferences?.theme;
+        memberData.memberSince = member.userId.createdAt;
+    }
+
+    return memberData;
+    });
+
+    return {
+      groupId: group._id,
+      groupName: group.name,
+      totalMembers: members.length,
+      maxMembers: group.settings.maxMembers,
+      members: members.sort((a, b) => {
+        // Sort: admins first, then by join date
+        if (a.role === 'admin' && b.role !== 'admin') return -1;
+        if (a.role !== 'admin' && b.role === 'admin') return 1;
+        return new Date(a.joinedAt) - new Date(b.joinedAt);
+      }),
+      requestingUserRole: requestingMember ? requestingMember.role : 'member'
+    };
+  } catch (error) {
+    logger.error('Get group members error:', error);
+    throw error;
+  }
 }
+
+  async getGroupActivity(groupId, requestingUserId, limit = 20) {
+    try {
+      const group = await Group.findById(groupId);
+
+      if (!group || !group.isActive) {
+        throw new Error('Group not found');
+      }
+
+      // Verify user is a member
+      if (!group.isMember(requestingUserId)) {
+        throw new Error('Access denied');
+      }
+
+      // This would typically come from an Activity/Log model
+      // For now, we'll return member join history and basic stats
+      const memberHistory = group.members.map(member => ({
+        type: 'member_joined',
+        userId: member.userId,
+        timestamp: member.joinedAt,
+        data: { role: member.role }
+      }));
+
+      // Sort by timestamp (most recent first)
+      const activity = memberHistory
+        .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+        .slice(0, limit);
+
+      return {
+        groupId: group._id,
+        activity,
+        hasMore: memberHistory.length > limit
+      };
+    } catch (error) {
+      logger.error('Get group activity error:', error);
+      throw error;
+    }
+  }
+
+  async updateMemberRole(groupId, targetUserId, newRole, requestingUserId) {
+    try {
+      const group = await Group.findById(groupId);
+
+      if (!group || !group.isActive) {
+        throw new Error('Group not found');
+      }
+
+      // Verify requesting user is admin
+      if (!group.isAdmin(requestingUserId)) {
+        throw new Error('Admin privileges required');
+      }
+
+      const targetMember = group.findMember(targetUserId);
+      if (!targetMember) {
+        throw new Error('Target user is not a member of this group');
+      }
+
+      // Cannot change your own role (use transfer admin instead)
+      if (targetUserId === requestingUserId) {
+        throw new Error('Cannot change your own role. Use transfer admin instead.');
+      }
+
+      // Validate new role
+      if (!Object.values(CONSTANTS.USER_ROLES).includes(newRole)) {
+        throw new Error('Invalid role specified');
+      }
+
+      // If promoting to admin, demote current admin
+      if (newRole === CONSTANTS.USER_ROLES.ADMIN) {
+        const currentAdmin = group.members.find(m => m.userId.toString() === requestingUserId);
+        currentAdmin.role = CONSTANTS.USER_ROLES.MEMBER;
+      }
+
+      targetMember.role = newRole;
+      await group.save();
+
+      logger.info(`User ${targetUserId} role changed to ${newRole} in group ${groupId} by ${requestingUserId}`);
+
+      return await group.toJSONWithMembers();
+    } catch (error) {
+      logger.error('Update member role error:', error);
+      throw error;
+    }
+  }
+
+  async searchGroups(searchQuery, requestingUserId, filters = {}) {
+    try {
+      const query = {
+        isActive: true,
+        $or: [
+          { name: { $regex: searchQuery, $options: 'i' } },
+          { description: { $regex: searchQuery, $options: 'i' } }
+        ]
+      };
+
+      // Only show groups that aren't full
+      if (filters.availableOnly !== false) {
+        query.$expr = {
+          $lt: [{ $size: '$members' }, '$settings.maxMembers']
+        };
+      }
+
+      const groups = await Group.find(query)
+        .select('name description members settings statistics createdAt')
+        .limit(filters.limit || 10)
+        .sort({ 'statistics.totalTasks': -1, memberCount: 1 }); // Active groups first
+
+      const searchResults = groups.map(group => ({
+        _id: group._id,
+        name: group.name,
+        description: group.description,
+        memberCount: group.members.length,
+        maxMembers: group.settings.maxMembers,
+        isAvailable: group.members.length < group.settings.maxMembers,
+        activityScore: group.statistics.totalTasks + group.statistics.completedTasks,
+        createdAt: group.createdAt
+      }));
+
+      return {
+        query: searchQuery,
+        results: searchResults,
+        total: searchResults.length
+      };
+    } catch (error) {
+      logger.error('Search groups error:', error);
+      throw error;
+    }
+  }
+
+  async getMyGroups(userId) {
+    try {
+      // For future multi-group support
+      const user = await User.findById(userId).populate({
+        path: 'groupId',
+        select: 'name description members statistics inviteCode'
+      });
+
+      if (!user || !user.isActive) {
+        throw new Error('User not found');
+      }
+
+      const groups = [];
+      if (user.groupId) {
+        const group = user.groupId;
+        const member = group.members.find(m => m.userId.toString() === userId);
+        
+        groups.push({
+          _id: group._id,
+          name: group.name,
+          description: group.description,
+          memberCount: group.members.length,
+          myRole: member ? member.role : 'member',
+          joinedAt: member ? member.joinedAt : null,
+          statistics: group.statistics,
+          inviteCode: member && member.role === 'admin' ? group.inviteCode : undefined
+        });
+      }
+
+      return {
+        groups,
+        total: groups.length
+      };
+    } catch (error) {
+      logger.error('Get my groups error:', error);
+      throw error;
+    }
+  }
+
+}
+
+
 
 module.exports = new GroupService();

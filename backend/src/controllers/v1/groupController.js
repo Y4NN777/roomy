@@ -208,6 +208,190 @@ class GroupController {
       next(error);
     }
   }
+
+  async getAllGroups(req, res, next) {
+    try {
+      const filters = {
+        search: req.query.search,
+        maxMembers: req.query.maxMembers,
+        limit: parseInt(req.query.limit) || 20,
+        offset: parseInt(req.query.offset) || 0
+      };
+
+      const result = await groupService.getAllGroups(req.user.id, filters);
+      
+      responseHelper.success(
+        res,
+        'Groups retrieved successfully',
+        result
+      );
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getGroupMembers(req, res, next) {
+    try {
+        const includeDetails = req.query.details === 'true';
+        
+        // Use the group and role from middleware
+        const group = req.group; // Set by verifyGroupMembership middleware
+        const requestingUserRole = req.userRole; // Set by verifyGroupMembership middleware
+        
+        // Populate member details
+        await group.populate({
+        path: 'members.userId',
+        select: includeDetails 
+            ? 'name email profilePicture lastLoginAt preferences.theme createdAt'
+            : 'name email profilePicture'
+        });
+
+        const isAdmin = requestingUserRole === 'admin';
+
+        // Transform members data
+        const members = group.members.map(member => {
+        const memberData = {
+            userId: member.userId._id,
+            name: member.userId.name,
+            email: member.userId.email,
+            profilePicture: member.userId.profilePicture,
+            role: member.role,
+            joinedAt: member.joinedAt,
+            isOnline: member.userId.lastLoginAt && 
+                    (new Date() - new Date(member.userId.lastLoginAt)) < 15 * 60 * 1000 // 15 minutes
+        };
+
+        // Add detailed info for admins or include details request
+        if (isAdmin || includeDetails) {
+            memberData.lastLoginAt = member.userId.lastLoginAt;
+            memberData.theme = member.userId.preferences?.theme;
+            memberData.memberSince = member.userId.createdAt;
+        }
+
+        return memberData;
+        });
+
+        const result = {
+        groupId: group._id,
+        groupName: group.name,
+        totalMembers: members.length,
+        maxMembers: group.settings.maxMembers,
+        members: members.sort((a, b) => {
+            // Sort: admins first, then by join date
+            if (a.role === 'admin' && b.role !== 'admin') return -1;
+            if (a.role !== 'admin' && b.role === 'admin') return 1;
+            return new Date(a.joinedAt) - new Date(b.joinedAt);
+        }),
+        requestingUserRole: requestingUserRole
+        };
+        
+        responseHelper.success(
+        res,
+        'Group members retrieved successfully',
+        result
+        );
+    } catch (error) {
+        next(error);
+    }
+    }
+
+  async getGroupActivity(req, res, next) {
+    try {
+      const { groupId } = req.params;
+      const limit = parseInt(req.query.limit) || 20;
+      
+      const activity = await groupService.getGroupActivity(groupId, req.user.id, limit);
+      
+      responseHelper.success(
+        res,
+        'Group activity retrieved successfully',
+        activity
+      );
+    } catch (error) {
+      if (error.message === 'Group not found') {
+        return responseHelper.notFound(res, error.message);
+      }
+      if (error.message === 'Access denied') {
+        return responseHelper.forbidden(res, error.message);
+      }
+      next(error);
+    }
+  }
+
+  async updateMemberRole(req, res, next) {
+    try {
+      const { groupId, userId } = req.params;
+      const { role } = req.body;
+      
+      const group = await groupService.updateMemberRole(groupId, userId, role, req.user.id);
+      
+      responseHelper.success(
+        res,
+        'Member role updated successfully',
+        { group }
+      );
+    } catch (error) {
+      if (error.message === 'Group not found') {
+        return responseHelper.notFound(res, error.message);
+      }
+      if (error.message.includes('Admin privileges') || 
+          error.message.includes('Cannot change')) {
+        return responseHelper.forbidden(res, error.message);
+      }
+      if (error.message.includes('Invalid role')) {
+        return responseHelper.error(res, error.message, 400, 'INVALID_ROLE');
+      }
+      next(error);
+    }
+  }
+
+  async searchGroups(req, res, next) {
+    try {
+      const { q } = req.query;
+      
+      if (!q || q.trim().length < 2) {
+        return responseHelper.error(
+          res, 
+          'Search query must be at least 2 characters', 
+          400, 
+          'INVALID_SEARCH_QUERY'
+        );
+      }
+
+      const filters = {
+        availableOnly: req.query.available !== 'false',
+        limit: parseInt(req.query.limit) || 10
+      };
+
+      const results = await groupService.searchGroups(q.trim(), req.user.id, filters);
+      
+      responseHelper.success(
+        res,
+        'Group search completed',
+        results
+      );
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getMyGroups(req, res, next) {
+    try {
+      const groups = await groupService.getMyGroups(req.user.id);
+      
+      responseHelper.success(
+        res,
+        'Your groups retrieved successfully',
+        groups
+      );
+    } catch (error) {
+      if (error.message === 'User not found') {
+        return responseHelper.notFound(res, error.message);
+      }
+      next(error);
+    }
+  }
+
 }
 
 module.exports = new GroupController();

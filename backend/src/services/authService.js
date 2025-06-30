@@ -147,7 +147,8 @@ class AuthService {
 
   async getUserProfile(userId) {
     try {
-      const user = await User.findById(userId).populate('groupId', 'name inviteCode');
+      // Remove the .populate() call until Group model is created
+      const user = await User.findById(userId);
       
       if (!user || !user.isActive) {
         throw new Error('User not found');

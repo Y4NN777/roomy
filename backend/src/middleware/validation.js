@@ -187,8 +187,216 @@ const groupSchemas = {
   })
 };
 
+const taskSchemas = {
+  createTask: Joi.object({
+    groupId: Joi.string()
+      .required()
+      .messages({
+        'any.required': 'Group ID is required',
+      }),
+    
+    title: Joi.string()
+      .trim()
+      .min(1)
+      .max(200)
+      .required()
+      .messages({
+        'string.min': 'Title is required',
+        'string.max': 'Title cannot exceed 200 characters',
+        'any.required': 'Title is required',
+      }),
+    
+    description: Joi.string()
+      .trim()
+      .max(1000)
+      .optional()
+      .allow('')
+      .messages({
+        'string.max': 'Description cannot exceed 1000 characters',
+      }),
+    
+    assignedTo: Joi.string()
+      .optional()
+      .allow(null),
+    
+    dueDate: Joi.date()
+      .optional()
+      .allow(null)
+      .min('now')
+      .messages({
+        'date.min': 'Due date cannot be in the past',
+      }),
+    
+    priority: Joi.string()
+      .valid('low', 'medium', 'high')
+      .optional()
+      .messages({
+        'any.only': 'Priority must be low, medium, or high',
+      }),
+    
+    category: Joi.string()
+      .valid('cleaning', 'cooking', 'shopping', 'maintenance', 'bills', 'other')
+      .optional()
+      .messages({
+        'any.only': 'Invalid category',
+      }),
+    
+    estimatedDuration: Joi.number()
+      .integer()
+      .min(1)
+      .optional()
+      .messages({
+        'number.min': 'Estimated duration must be at least 1 minute',
+      }),
+  }),
+
+  updateTask: Joi.object({
+    title: Joi.string()
+      .trim()
+      .min(1)
+      .max(200)
+      .optional(),
+    
+    description: Joi.string()
+      .trim()
+      .max(1000)
+      .optional()
+      .allow(''),
+    
+    assignedTo: Joi.string()
+      .optional()
+      .allow(null),
+    
+    dueDate: Joi.date()
+      .optional()
+      .allow(null),
+    
+    priority: Joi.string()
+      .valid('low', 'medium', 'high')
+      .optional(),
+    
+    status: Joi.string()
+      .valid('pending', 'in_progress', 'completed', 'cancelled')
+      .optional(),
+    
+    category: Joi.string()
+      .valid('cleaning', 'cooking', 'shopping', 'maintenance', 'bills', 'other')
+      .optional(),
+    
+    estimatedDuration: Joi.number()
+      .integer()
+      .min(1)
+      .optional(),
+  }),
+
+  completeTask: Joi.object({
+    actualDuration: Joi.number()
+      .integer()
+      .min(1)
+      .optional()
+      .messages({
+        'number.min': 'Actual duration must be at least 1 minute',
+      }),
+  }),
+
+  addNote: Joi.object({
+    content: Joi.string()
+      .trim()
+      .min(1)
+      .max(500)
+      .required()
+      .messages({
+        'string.min': 'Note content is required',
+        'string.max': 'Note cannot exceed 500 characters',
+        'any.required': 'Note content is required',
+      }),
+  }),
+};
+
+const expenseSchemas = {
+  createExpense: Joi.object({
+    groupId: Joi.string()
+      .required()
+      .messages({
+        'any.required': 'Group ID is required',
+      }),
+    
+    amount: Joi.number()
+      .positive()
+      .precision(2)
+      .required()
+      .messages({
+        'number.positive': 'Amount must be greater than 0',
+        'any.required': 'Amount is required',
+      }),
+    
+    description: Joi.string()
+      .trim()
+      .min(1)
+      .max(500)
+      .required()
+      .messages({
+        'string.min': 'Description is required',
+        'string.max': 'Description cannot exceed 500 characters',
+        'any.required': 'Description is required',
+      }),
+    
+    category: Joi.string()
+      .valid('groceries', 'utilities', 'rent', 'maintenance', 'entertainment', 'other')
+      .optional()
+      .messages({
+        'any.only': 'Invalid category',
+      }),
+    
+    date: Joi.date()
+      .optional()
+      .max('now')
+      .messages({
+        'date.max': 'Expense date cannot be in the future',
+      }),
+    
+    notes: Joi.string()
+      .trim()
+      .max(1000)
+      .optional()
+      .allow('')
+      .messages({
+        'string.max': 'Notes cannot exceed 1000 characters',
+      }),
+  }),
+
+  updateExpense: Joi.object({
+    amount: Joi.number()
+      .positive()
+      .precision(2)
+      .optional(),
+    
+    description: Joi.string()
+      .trim()
+      .min(1)
+      .max(500)
+      .optional(),
+    
+    category: Joi.string()
+      .valid('groceries', 'utilities', 'rent', 'maintenance', 'entertainment', 'other')
+      .optional(),
+    
+    date: Joi.date()
+      .optional()
+      .max('now'),
+    
+    notes: Joi.string()
+      .trim()
+      .max(1000)
+      .optional()
+      .allow(''),
+  }),
+};
+
 module.exports = {
   validate,
   authSchemas,
   groupSchemas,
+  taskSchemas,
+  expenseSchemas,
 };

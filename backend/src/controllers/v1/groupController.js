@@ -29,7 +29,9 @@ class GroupController {
   async joinGroup(req, res, next) {
     try {
       const { inviteCode } = req.body;
-      const group = await groupService.joinGroup(inviteCode, req.user.id);
+      
+      // ADD the missing parameter (true = send welcome email)
+      const group = await groupService.joinGroup(inviteCode, req.user.id, true);
       
       responseHelper.success(
         res,
@@ -128,7 +130,7 @@ class GroupController {
     try {
       const { groupId } = req.params;
       const { newAdminId } = req.body;
-      const group = await groupService.transferAdmin(groupId, newAdminId, req.user.id);
+      const group = await groupService.transferAdmin(groupId, newAdminId, req.user.id, true);
       
       responseHelper.success(
         res,

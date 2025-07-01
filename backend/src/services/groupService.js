@@ -41,7 +41,7 @@ class GroupService {
     }
   }
 
-  async joinGroup(inviteCode, userId) {
+  async joinGroup(inviteCode, userId, shouldSendWelcomeEmail = true) {
     try {
       // Check if user is already in a group
       const user = await User.findById(userId);
@@ -67,22 +67,23 @@ class GroupService {
       user.groupId = group._id;
       await user.save();
 
+      // Send welcome email if enabled
       if (shouldSendWelcomeEmail) {
         try {
-            const admin = group.members.find(member => member.role === 'admin');
-            const notificationService = require('./notificationService');
-            
-            await notificationService.sendWelcomeToGroup({
+          const admin = group.members.find(member => member.role === 'admin');
+          const notificationService = require('./notificationService');
+          
+          await notificationService.sendWelcomeToGroup({
             userEmail: user.email,
             userName: user.name,
             groupName: group.name,
             memberCount: group.members.length,
             adminName: admin ? admin.userId.name : 'Group Admin'
-            });
-         }catch (emailError) {
-            logger.warn('Welcome email failed, but user joined successfully:', emailError);
-         }
+          });
+        } catch (emailError) {
+          logger.warn('Welcome email failed, but user joined successfully:', emailError);
         }
+      }
 
       logger.info(`User ${userId} joined group ${group.name}`);
 
@@ -178,45 +179,46 @@ class GroupService {
     }
   }
 
-  async transferAdmin(groupId, newAdminId, currentAdminId) {
-    try {
-      const group = await Group.findById(groupId);
+  async transferAdmin(groupId, newAdminId, currentAdminId, shouldNotify = true) {
+  try {
+      const group = await Group.findById(groupId).populate('members.userId', 'name email');
 
       if (!group || !group.isActive) {
-        throw new Error('Group not found');
+      throw new Error('Group not found');
       }
 
       // Transfer admin role
       group.transferAdmin(currentAdminId, newAdminId);
       await group.save();
 
+      // Send notification email to new admin
       if (shouldNotify) {
-        try {
-            const newAdmin = group.members.find(m => m.userId._id.toString() === newAdminId);
-            const currentAdmin = group.members.find(m => m.userId._id.toString() === currentAdminId);
-            
-            if (newAdmin && currentAdmin) {
-            const notificationService = require('./notificationService');
-            await notificationService.sendRoleChangeNotification({
-                userEmail: newAdmin.userId.email,
-                userName: newAdmin.userId.name,
-                groupName: group.name,
-                newRole: 'admin',
-                changedBy: currentAdmin.userId.name
-            });
-            }
-        } catch (emailError) {
-            logger.warn('Role change email failed, but transfer completed:', emailError);
-        }
+      try {
+          const newAdmin = group.members.find(m => m.userId._id.toString() === newAdminId);
+          const currentAdmin = group.members.find(m => m.userId._id.toString() === currentAdminId);
+          
+          if (newAdmin && currentAdmin) {
+          const notificationService = require('./notificationService');
+          await notificationService.sendRoleChangeNotification({
+              userEmail: newAdmin.userId.email,
+              userName: newAdmin.userId.name,
+              groupName: group.name,
+              newRole: 'admin',
+              changedBy: currentAdmin.userId.name
+          });
+          }
+      } catch (emailError) {
+          logger.warn('Role change email failed, but transfer completed:', emailError);
+      }
       }
 
       logger.info(`Admin role transferred from ${currentAdminId} to ${newAdminId} in group ${groupId}`);
 
       return await group.toJSONWithMembers();
-    } catch (error) {
+  } catch (error) {
       logger.error('Transfer admin error:', error);
       throw error;
-    }
+  }
   }
 
   async leaveGroup(groupId, userId) {

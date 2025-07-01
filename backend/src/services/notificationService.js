@@ -199,27 +199,229 @@ class NotificationService {
     return notifications;
   }
 
-  async notifyTaskAssignment(assigneeEmail, assigneeName, taskTitle, assignedBy, groupName) {
-    if (!this.emailEnabled) return { success: false, reason: 'Email not configured' };
+
+
+
+  async notifyTaskReassignment(data) {
+    const { newAssigneeEmail, newAssigneeName, taskTitle, reassignedBy, groupName, dueDate, priority } = data;
+    
+    if (!this.emailEnabled) {
+      logger.warn('📧 Email not configured, skipping task reassignment notification');
+      return { success: false, reason: 'Email not configured' };
+    }
 
     try {
-      const subject = `📋 New task assigned: "${taskTitle}"`;
-      const html = `
-        <h2>Hi ${assigneeName}!</h2>
-        <p><strong>${assignedBy}</strong> assigned you a new task in <strong>${groupName}</strong>:</p>
-        <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <h3>📋 ${taskTitle}</h3>
-        </div>
-        <p>Check the Roomy app to see the details and mark it complete when done!</p>
-      `;
-      
-      return await this.sendEmail(assigneeEmail, subject, html);
+      const template = emailTemplates.taskReassigned({
+        newAssigneeName,
+        taskTitle,
+        reassignedBy,
+        groupName,
+        dueDate,
+        priority
+      });
+
+      const result = await this.sendEmail(
+        newAssigneeEmail,
+        template.subject,
+        template.html,
+        template.text
+      );
+
+      if (result.success) {
+        logger.info(`✅ Task reassignment notification sent to ${newAssigneeEmail}`);
+      }
+
+      return result;
     } catch (error) {
-      logger.error('Send task assignment notification error:', error);
+      logger.error('❌ Send task reassignment notification error:', error);
       return { success: false, error: error.message };
     }
   }
 
+  async notifyTaskUpdate(data) {
+    const { assigneeEmail, assigneeName, taskTitle, updatedBy, groupName, changes } = data;
+    
+    if (!this.emailEnabled) {
+      logger.warn('📧 Email not configured, skipping task update notification');
+      return { success: false, reason: 'Email not configured' };
+    }
+
+    try {
+      const template = emailTemplates.taskUpdated({
+        assigneeName,
+        taskTitle,
+        updatedBy,
+        groupName,
+        changes
+      });
+
+      const result = await this.sendEmail(
+        assigneeEmail,
+        template.subject,
+        template.html,
+        template.text
+      );
+
+      if (result.success) {
+        logger.info(`✅ Task update notification sent to ${assigneeEmail}`);
+      }
+
+      return result;
+    } catch (error) {
+      logger.error('❌ Send task update notification error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  async notifyTaskCompletion(data) {
+    const { creatorEmail, creatorName, taskTitle, completedBy, groupName, actualDuration } = data;
+
+    if (!this.emailEnabled) {
+        logger.warn('📧 Email not configured, skipping task completion notification');
+        return { success: false, reason: 'Email not configured' };
+    }
+
+    try {
+        const template = emailTemplates.taskCompleted({
+        creatorName,
+        taskTitle,
+        completedBy,
+        groupName,
+        actualDuration
+        });
+
+        const result = await this.sendEmail(
+        creatorEmail,
+        template.subject,
+        template.html,
+        template.text
+        );
+
+        if (result.success) {
+        logger.info(`✅ Task completion notification sent to ${creatorEmail}`);
+        }
+
+        return result;
+    } catch (error) {
+        logger.error('❌ Send task completion notification error:', error);
+        return { success: false, error: error.message };
+    }
+    }
+
+  async notifyTaskDueSoon(data) {
+    const { assigneeEmail, assigneeName, taskTitle, groupName, dueDate } = data;
+
+    if (!this.emailEnabled) {
+        logger.warn('📧 Email not configured, skipping due date reminder');
+        return { success: false, reason: 'Email not configured' };
+    }
+
+    try {
+        const now = new Date();
+        const due = new Date(dueDate);
+        const hoursUntilDue = Math.round((due - now) / (1000 * 60 * 60));
+
+        const template = emailTemplates.taskDueSoon({
+        assigneeName,
+        taskTitle,
+        groupName,
+        dueDate,
+        hoursUntilDue
+        });
+
+        const result = await this.sendEmail(
+        assigneeEmail,
+        template.subject,
+        template.html,
+        template.text
+        );
+
+        if (result.success) {
+        logger.info(`✅ Task due reminder sent to ${assigneeEmail}`);
+        }
+
+        return result;
+    } catch (error) {
+        logger.error('❌ Send task due reminder error:', error);
+        return { success: false, error: error.message };
+    }
+  }
+
+
+  async notifyTaskAssignment(assigneeEmail, assigneeName, taskTitle, assignedBy, groupName, taskDetails = {}) {
+    if (!this.emailEnabled) {
+      logger.warn('📧 Email not configured, skipping task assignment notification');
+      return { success: false, reason: 'Email not configured' };
+    }
+
+    try {
+      const { dueDate, priority, description, estimatedDuration } = taskDetails;
+      
+      const subject = `📋 New task assigned: "${taskTitle}"`;
+      const html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 0; background-color: #f5f5f5; }
+            .container { max-width: 600px; margin: 0 auto; background-color: white; border-radius: 8px; overflow: hidden; }
+            .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px 20px; text-align: center; }
+            .content { padding: 30px 20px; }
+            .task-card { background-color: #f8f9fa; border-left: 4px solid #667eea; padding: 20px; margin: 20px 0; border-radius: 8px; }
+            .priority-badge { background-color: ${priority === 'high' ? '#dc3545' : priority === 'medium' ? '#ffc107' : '#28a745'}; color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: bold; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1 style="color: white; margin: 0;">📋 New Task Assigned</h1>
+            </div>
+            <div class="content">
+              <h2>Hi ${assigneeName}!</h2>
+              <p><strong>${assignedBy}</strong> assigned you a new task in <strong>${groupName}</strong>:</p>
+              
+              <div class="task-card">
+                <h3>📋 ${taskTitle}</h3>
+                ${description ? `<p>${description}</p>` : ''}
+                ${priority ? `<p><span class="priority-badge">${priority.toUpperCase()}</span></p>` : ''}
+                ${dueDate ? `<p><strong>Due:</strong> ${new Date(dueDate).toLocaleDateString()}</p>` : ''}
+                ${estimatedDuration ? `<p><strong>Estimated time:</strong> ${estimatedDuration} minutes</p>` : ''}
+              </div>
+
+              <p>Check the Roomy app to see the full details and mark it complete when done! 🎯</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `;
+      
+      const text = `
+  Hi ${assigneeName}!
+
+  ${assignedBy} assigned you a new task in ${groupName}:
+
+  📋 ${taskTitle}
+  ${description ? `Description: ${description}` : ''}
+  ${priority ? `Priority: ${priority.toUpperCase()}` : ''}
+  ${dueDate ? `Due: ${new Date(dueDate).toLocaleDateString()}` : ''}
+  ${estimatedDuration ? `Estimated time: ${estimatedDuration} minutes` : ''}
+
+  Check the Roomy app to see the full details and mark it complete when done!
+      `;
+      
+      const result = await this.sendEmail(assigneeEmail, subject, html, text);
+      
+      if (result.success) {
+        logger.info(`✅ Enhanced task assignment notification sent to ${assigneeEmail}`);
+      }
+      
+      return result;
+    } catch (error) {
+      logger.error('❌ Send enhanced task assignment notification error:', error);
+      return { success: false, error: error.message };
+    }
+  }
   // Batch notification methods
   async sendBulkNotifications(notifications) {
     const results = [];

@@ -273,7 +273,234 @@ ${newRole === 'admin' ?
 }
       `
     };
-  }
-};
+  },
+
+    taskReassigned: (data) => {
+    const { newAssigneeName, taskTitle, reassignedBy, groupName, dueDate, priority } = data;
+    
+    return {
+      subject: `🔄 Task reassigned to you: "${taskTitle}"`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 0; background-color: #f5f5f5; }
+            .container { max-width: 600px; margin: 0 auto; background-color: white; border-radius: 8px; overflow: hidden; }
+            .header { background: linear-gradient(135deg, #ff9500 0%, #ff6b35 100%); padding: 30px 20px; text-align: center; }
+            .content { padding: 30px 20px; }
+            .task-card { background-color: #fff8f0; border-left: 4px solid #ff9500; padding: 20px; margin: 20px 0; border-radius: 8px; }
+            .priority-badge { background-color: ${priority === 'high' ? '#dc3545' : priority === 'medium' ? '#ffc107' : '#28a745'}; color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: bold; }
+            .button { display: inline-block; background: linear-gradient(135deg, #ff9500 0%, #ff6b35 100%); color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; margin: 15px 0; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1 style="color: white; margin: 0;">🔄 Task Reassigned</h1>
+            </div>
+            <div class="content">
+              <h2>Hi ${newAssigneeName}!</h2>
+              <p><strong>${reassignedBy}</strong> has reassigned a task to you in <strong>${groupName}</strong>:</p>
+              
+              <div class="task-card">
+                <h3>📋 ${taskTitle}</h3>
+                <p><span class="priority-badge">${priority.toUpperCase()}</span></p>
+                ${dueDate ? `<p><strong>Due:</strong> ${new Date(dueDate).toLocaleDateString()}</p>` : ''}
+              </div>
+
+              <p>This task was previously assigned to someone else, but now it's yours to complete!</p>
+              
+              <div style="text-align: center;">
+                <a href="#" class="button">View Task Details</a>
+              </div>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+      text: `
+Hi ${newAssigneeName}!
+
+${reassignedBy} has reassigned a task to you in ${groupName}:
+
+📋 ${taskTitle}
+Priority: ${priority.toUpperCase()}
+${dueDate ? `Due: ${new Date(dueDate).toLocaleDateString()}` : ''}
+
+This task was previously assigned to someone else, but now it's yours to complete!
+
+Check the Roomy app to see the full details and mark it complete when done.
+      `
+    };
+  },
+
+  taskUpdated: (data) => {
+    const { assigneeName, taskTitle, updatedBy, groupName, changes } = data;
+    
+    const changesList = Object.entries(changes).map(([field, { old, new: newVal }]) => {
+      return `<li><strong>${field}:</strong> ${old} → ${newVal}</li>`;
+    }).join('');
+    
+    return {
+      subject: `📝 Task updated: "${taskTitle}"`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 0; background-color: #f5f5f5; }
+            .container { max-width: 600px; margin: 0 auto; background-color: white; border-radius: 8px; overflow: hidden; }
+            .header { background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); padding: 30px 20px; text-align: center; }
+            .content { padding: 30px 20px; }
+            .changes-card { background-color: #f8f9fa; border-left: 4px solid #007bff; padding: 20px; margin: 20px 0; border-radius: 8px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1 style="color: white; margin: 0;">📝 Task Updated</h1>
+            </div>
+            <div class="content">
+              <h2>Hi ${assigneeName}!</h2>
+              <p><strong>${updatedBy}</strong> updated your assigned task in <strong>${groupName}</strong>:</p>
+              
+              <div class="changes-card">
+                <h3>📋 ${taskTitle}</h3>
+                <p><strong>Changes made:</strong></p>
+                <ul>${changesList}</ul>
+              </div>
+
+              <p>Check the Roomy app to see the updated task details!</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+      text: `
+Hi ${assigneeName}!
+
+${updatedBy} updated your assigned task in ${groupName}:
+
+📋 ${taskTitle}
+
+Changes made:
+${Object.entries(changes).map(([field, { old, new: newVal }]) => `- ${field}: ${old} → ${newVal}`).join('\n')}
+
+Check the Roomy app to see the updated task details!
+      `
+    };
+  },
+
+  taskCompleted: (data) => {
+    const { creatorName, taskTitle, completedBy, groupName, actualDuration } = data;
+    
+    return {
+      subject: `✅ Task completed: "${taskTitle}"`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 0; background-color: #f5f5f5; }
+            .container { max-width: 600px; margin: 0 auto; background-color: white; border-radius: 8px; overflow: hidden; }
+            .header { background: linear-gradient(135deg, #28a745 0%, #20c997 100%); padding: 30px 20px; text-align: center; }
+            .content { padding: 30px 20px; }
+            .completion-card { background-color: #f8fff9; border-left: 4px solid #28a745; padding: 20px; margin: 20px 0; border-radius: 8px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1 style="color: white; margin: 0;">✅ Task Completed!</h1>
+            </div>
+            <div class="content">
+              <h2>Great news, ${creatorName}!</h2>
+              <p><strong>${completedBy}</strong> has completed the task you created in <strong>${groupName}</strong>:</p>
+              
+              <div class="completion-card">
+                <h3>✅ ${taskTitle}</h3>
+                <p><strong>Completed by:</strong> ${completedBy}</p>
+                ${actualDuration ? `<p><strong>Time taken:</strong> ${actualDuration} minutes</p>` : ''}
+                <p><strong>Status:</strong> <span style="color: #28a745; font-weight: bold;">COMPLETED</span></p>
+              </div>
+
+              <p>🎉 Thanks for staying organized with Roomy!</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+      text: `
+Great news, ${creatorName}!
+
+${completedBy} has completed the task you created in ${groupName}:
+
+✅ ${taskTitle}
+Completed by: ${completedBy}
+${actualDuration ? `Time taken: ${actualDuration} minutes` : ''}
+Status: COMPLETED
+
+🎉 Thanks for staying organized with Roomy!
+      `
+    };
+  },
+
+  taskDueSoon: (data) => {
+    const { assigneeName, taskTitle, groupName, dueDate, hoursUntilDue } = data;
+    
+    return {
+      subject: `⏰ Task due soon: "${taskTitle}"`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 0; background-color: #f5f5f5; }
+            .container { max-width: 600px; margin: 0 auto; background-color: white; border-radius: 8px; overflow: hidden; }
+            .header { background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%); padding: 30px 20px; text-align: center; }
+            .content { padding: 30px 20px; }
+            .reminder-card { background-color: #fff8e1; border-left: 4px solid #ffc107; padding: 20px; margin: 20px 0; border-radius: 8px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1 style="color: white; margin: 0;">⏰ Task Due Soon</h1>
+            </div>
+            <div class="content">
+              <h2>Hi ${assigneeName}!</h2>
+              <p>Just a friendly reminder that you have a task due soon in <strong>${groupName}</strong>:</p>
+              
+              <div class="reminder-card">
+                <h3>📋 ${taskTitle}</h3>
+                <p><strong>Due:</strong> ${new Date(dueDate).toLocaleString()}</p>
+                <p><strong>Time remaining:</strong> ${hoursUntilDue} hours</p>
+              </div>
+
+              <p>Don't forget to mark it complete when you're done! 🎯</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+      text: `
+Hi ${assigneeName}!
+
+Just a friendly reminder that you have a task due soon in ${groupName}:
+
+📋 ${taskTitle}
+Due: ${new Date(dueDate).toLocaleString()}
+Time remaining: ${hoursUntilDue} hours
+
+Don't forget to mark it complete when you're done! 🎯
+      `
+    };
+}
+}
 
 module.exports = emailTemplates;

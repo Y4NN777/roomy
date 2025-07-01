@@ -23,6 +23,7 @@ router.patch('/profile',
   authController.updateProfile
 );
 
+
 // Delete profile picture
 router.delete('/profile/picture', authenticateToken, authController.deleteProfilePicture);
 

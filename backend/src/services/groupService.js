@@ -53,7 +53,7 @@ class GroupService {
       const group = await Group.findOne({ 
         inviteCode: inviteCode.toUpperCase(), 
         isActive: true 
-      });
+      }).populate('members.userId', 'name email');
 
       if (!group) {
         throw new Error('Invalid invite code');
@@ -66,6 +66,23 @@ class GroupService {
       // Update user's groupId
       user.groupId = group._id;
       await user.save();
+
+      if (shouldSendWelcomeEmail) {
+        try {
+            const admin = group.members.find(member => member.role === 'admin');
+            const notificationService = require('./notificationService');
+            
+            await notificationService.sendWelcomeToGroup({
+            userEmail: user.email,
+            userName: user.name,
+            groupName: group.name,
+            memberCount: group.members.length,
+            adminName: admin ? admin.userId.name : 'Group Admin'
+            });
+         }catch (emailError) {
+            logger.warn('Welcome email failed, but user joined successfully:', emailError);
+         }
+        }
 
       logger.info(`User ${userId} joined group ${group.name}`);
 
@@ -172,6 +189,26 @@ class GroupService {
       // Transfer admin role
       group.transferAdmin(currentAdminId, newAdminId);
       await group.save();
+
+      if (shouldNotify) {
+        try {
+            const newAdmin = group.members.find(m => m.userId._id.toString() === newAdminId);
+            const currentAdmin = group.members.find(m => m.userId._id.toString() === currentAdminId);
+            
+            if (newAdmin && currentAdmin) {
+            const notificationService = require('./notificationService');
+            await notificationService.sendRoleChangeNotification({
+                userEmail: newAdmin.userId.email,
+                userName: newAdmin.userId.name,
+                groupName: group.name,
+                newRole: 'admin',
+                changedBy: currentAdmin.userId.name
+            });
+            }
+        } catch (emailError) {
+            logger.warn('Role change email failed, but transfer completed:', emailError);
+        }
+      }
 
       logger.info(`Admin role transferred from ${currentAdminId} to ${newAdminId} in group ${groupId}`);
 
@@ -315,6 +352,66 @@ class GroupService {
       throw error;
     }
   }
+
+
+
+async sendEmailInvitation(groupId, recipientEmail, requestingUserId, customMessage = '') {
+  try {
+    const group = await Group.findById(groupId).populate('members.userId', 'name email');
+    
+    if (!group || !group.isActive) {
+      throw new Error('Group not found');
+    }
+
+    // Check if email is already a member
+    const existingMember = group.members.find(member => 
+      member.userId.email.toLowerCase() === recipientEmail.toLowerCase()
+    );
+    
+    if (existingMember) {
+      throw new Error('User is already a member of this group');
+    }
+
+    // Get inviter details
+    const inviter = group.members.find(member => 
+      member.userId._id.toString() === requestingUserId
+    );
+
+    if (!inviter) {
+      throw new Error('Inviter not found in group');
+    }
+
+    // Send invitation email
+    const notificationService = require('./notificationService');
+    const emailResult = await notificationService.sendGroupInvitation({
+      recipientEmail,
+      inviterName: inviter.userId.name,
+      groupName: group.name,
+      inviteCode: group.inviteCode,
+      customMessage
+    });
+
+    if (emailResult.success) {
+      logger.info(`Email invitation sent to ${recipientEmail} for group ${groupId} by ${requestingUserId}`);
+      
+      return {
+        success: true,
+        recipientEmail,
+        inviteCode: group.inviteCode,
+        inviterName: inviter.userId.name,
+        groupName: group.name,
+        messageId: emailResult.messageId
+      };
+    } else {
+      throw new Error(`Failed to send email: ${emailResult.error}`);
+    }
+  } catch (error) {
+    logger.error('Send email invitation error:', error);
+    throw error;
+  }
+}
+
+
 
 async getGroupMembers(groupId, requestingUserId, includeDetails = false) {
 try {

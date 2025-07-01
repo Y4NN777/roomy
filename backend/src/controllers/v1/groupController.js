@@ -375,6 +375,46 @@ class GroupController {
     }
   }
 
+  // Add this method to the existing GroupController class:
+
+  async sendEmailInvitation(req, res, next) {
+    try {
+        const { groupId } = req.params;
+        const { email, message } = req.body;
+        
+        const result = await groupService.sendEmailInvitation(
+        groupId, 
+        email, 
+        req.user.id, 
+        message
+        );
+        
+        responseHelper.success(
+        res,
+        'Invitation email sent successfully',
+        {
+            recipientEmail: result.recipientEmail,
+            inviteCode: result.inviteCode,
+            groupName: result.groupName
+        }
+        );
+    } catch (error) {
+        if (error.message === 'Group not found') {
+        return responseHelper.notFound(res, error.message);
+        }
+        if (error.message === 'Admin privileges required') {
+        return responseHelper.forbidden(res, error.message);
+        }
+        if (error.message === 'User is already a member of this group') {
+        return responseHelper.error(res, error.message, 409, 'ALREADY_MEMBER');
+        }
+        if (error.message.includes('Failed to send email')) {
+        return responseHelper.error(res, error.message, 500, 'EMAIL_SEND_FAILED');
+        }
+        next(error);
+    }
+  }
+
   async getMyGroups(req, res, next) {
     try {
       const groups = await groupService.getMyGroups(req.user.id);

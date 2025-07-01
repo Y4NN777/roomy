@@ -65,6 +65,13 @@ router.patch('/:groupId',
   groupController.updateGroup
 );
 
+router.post('/:groupId/invite-email', 
+  authenticateToken, 
+  verifyGroupAdmin, 
+  validate(groupSchemas.sendEmailInvitation), 
+  groupController.sendEmailInvitation
+);
+
 router.delete('/:groupId/members/:userId', 
   authenticateToken, 
   verifyGroupAdmin, 

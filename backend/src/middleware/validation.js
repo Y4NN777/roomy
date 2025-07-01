@@ -121,6 +121,28 @@ const groupSchemas = {
       }),
   }),
 
+  // Add to groupSchemas:
+  sendEmailInvitation: Joi.object({
+    email: Joi.string()
+        .email()
+        .trim()
+        .lowercase()
+        .required()
+        .messages({
+        'string.email': 'Please provide a valid email address',
+        'any.required': 'Email is required',
+        }),
+
+    message: Joi.string()
+        .trim()
+        .max(500)
+        .optional()
+        .allow('')
+        .messages({
+        'string.max': 'Message cannot exceed 500 characters',
+        }),
+    } ),
+
   updateGroup: Joi.object({
     name: Joi.string()
       .trim()

@@ -226,6 +226,63 @@ expenseSchema.statics.getGroupExpenses = function(groupId, filters = {}) {
     .sort({ date: -1 });
 };
 
+// Enhanced method to get detailed balance explanation
+expenseSchema.statics.getDetailedBalanceExplanation = async function(groupId, userId) {
+  const expenses = await this.find({ groupId })
+    .populate('payerId', 'name')
+    .populate('splits.memberId', 'name');
+  
+  const transactions = [];
+  let totalPaid = 0;
+  let totalOwed = 0;
+  let totalSpentForOthers = 0;
+  
+  expenses.forEach(expense => {
+    const userSplit = expense.splits.find(split => 
+      split.memberId._id.toString() === userId
+    );
+    
+    if (userSplit) {
+      const transaction = {
+        expenseId: expense._id,
+        description: expense.description,
+        date: expense.date,
+        totalAmount: expense.amount,
+        yourShare: userSplit.amount,
+        paid: userSplit.paid,
+        paidBy: expense.payerId.name,
+        isPayer: expense.payerId._id.toString() === userId
+      };
+      
+      if (transaction.isPayer) {
+        transaction.youPaid = expense.amount;
+        transaction.yourShare = userSplit.amount;
+        transaction.paidForOthers = expense.amount - userSplit.amount;
+        totalPaid += expense.amount;
+        totalSpentForOthers += transaction.paidForOthers;
+      } else if (userSplit.paid) {
+        transaction.youPaid = userSplit.amount;
+        totalPaid += userSplit.amount;
+      } else {
+        transaction.youOwe = userSplit.amount;
+        totalOwed += userSplit.amount;
+      }
+      
+      transactions.push(transaction);
+    }
+  });
+  
+  return {
+    userId,
+    transactions,
+    summary: {
+      totalPaid: parseFloat(totalPaid.toFixed(2)),
+      totalOwed: parseFloat(totalOwed.toFixed(2)),
+      totalSpentForOthers: parseFloat(totalSpentForOthers.toFixed(2)),
+      netBalance: parseFloat((totalSpentForOthers - totalOwed).toFixed(2))
+    }
+  };
+};
 // CORRECTED calculateGroupBalances static method
 expenseSchema.statics.calculateGroupBalances = async function(groupId) {
   console.log('🔍 DEBUG - calculateGroupBalances for group:', groupId.toString());
@@ -247,8 +304,9 @@ expenseSchema.statics.calculateGroupBalances = async function(groupId) {
         userId: payerId,
         name: expense.payerId.name,
         email: expense.payerId.email,
-        totalPaid: 0,        // Money spent out of pocket
-        totalOwed: 0,        // CURRENT unpaid debt only
+        totalPaid: 0,        // Total money paid (out of pocket + split payments)
+        totalOwed: 0,        // Current unpaid debt only
+        totalSpentOnOwn: 0,  // Money spent on own expenses vs for others
         netBalance: 0,       // Net amount (positive = owed money, negative = owes money)
       });
     }
@@ -263,6 +321,7 @@ expenseSchema.statics.calculateGroupBalances = async function(groupId) {
           email: split.memberId.email,
           totalPaid: 0,
           totalOwed: 0,
+          totalSpentOnOwn: 0,
           netBalance: 0,
         });
       }
@@ -278,7 +337,7 @@ expenseSchema.statics.calculateGroupBalances = async function(groupId) {
     console.log(`    Payer: ${expense.payerId.name} (${payerId})`);
     console.log(`    Amount: $${expense.amount}`);
     
-    // Payer spent money out of pocket
+    // Payer spent money out of pocket (full expense amount)
     payerBalance.totalPaid += expense.amount;
     
     expense.splits.forEach(split => {
@@ -287,35 +346,59 @@ expenseSchema.statics.calculateGroupBalances = async function(groupId) {
       
       console.log(`    Split: ${split.memberId.name} owes $${split.amount}, paid: ${split.paid}`);
       
-      if (!split.paid) {
+      if (split.paid) {
+        // This person has paid their split
+        if (memberId !== payerId) {
+          // Member paid their share (not the original payer)
+          memberBalance.totalPaid += split.amount;
+          memberBalance.totalSpentOnOwn += split.amount;
+          console.log(`      ${split.memberId.name} paid their share of $${split.amount}`);
+        } else {
+          // Payer's own split - already counted in totalPaid above
+          payerBalance.totalSpentOnOwn += split.amount;
+          console.log(`      ${split.memberId.name} covered their own share of $${split.amount}`);
+        }
+      } else {
         // This person still owes money for this expense
         memberBalance.totalOwed += split.amount;
         
-        // Update net balances
+        // Update net balances for unpaid splits
         if (memberId !== payerId) {
           // Normal case: member owes money to the payer
           payerBalance.netBalance += split.amount;  // Payer is owed this amount
           memberBalance.netBalance -= split.amount; // Member owes this amount
           console.log(`      ${split.memberId.name} owes ${expense.payerId.name} $${split.amount}`);
         } else {
-          // This shouldn't happen if payer's split is marked as paid
+          // Edge case: payer's split is not marked as paid (shouldn't happen normally)
           console.warn(`    ⚠️  WARNING: Payer ${expense.payerId.name} has unpaid split of $${split.amount}`);
+          payerBalance.totalOwed += split.amount;
         }
-      } else {
-        console.log(`      ${split.memberId.name} already paid their share`);
       }
     });
   });
   
-  const finalBalances = Array.from(balances.values());
+  // Final calculations and cleanup
+  const finalBalances = Array.from(balances.values()).map(balance => ({
+    ...balance,
+    totalPaid: parseFloat(balance.totalPaid.toFixed(2)),
+    totalOwed: parseFloat(balance.totalOwed.toFixed(2)),
+    totalSpentOnOwn: parseFloat(balance.totalSpentOnOwn.toFixed(2)),
+    netBalance: parseFloat(balance.netBalance.toFixed(2)),
+    // Additional helpful metrics
+    totalSpentForOthers: parseFloat((balance.totalPaid - balance.totalSpentOnOwn).toFixed(2)),
+    isSettled: balance.totalOwed === 0 && balance.netBalance === 0
+  }));
+  
   console.log('  - Final balances:');
   finalBalances.forEach(balance => {
-    console.log(`    ${balance.name}: paid $${balance.totalPaid}, owes $${balance.totalOwed}, net $${balance.netBalance}`);
+    console.log(`    ${balance.name}:`);
+    console.log(`      - Total paid: $${balance.totalPaid} (own: $${balance.totalSpentOnOwn}, others: $${balance.totalSpentForOthers})`);
+    console.log(`      - Currently owes: $${balance.totalOwed}`);
+    console.log(`      - Net balance: $${balance.netBalance} (${balance.netBalance > 0 ? 'owed money' : balance.netBalance < 0 ? 'owes money' : 'settled'})`);
   });
   
   return finalBalances;
 };
-
 // Transform output
 expenseSchema.methods.toJSON = function() {
   const obj = this.toObject({ virtuals: true });

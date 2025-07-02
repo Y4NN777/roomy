@@ -152,6 +152,56 @@ class ExpenseController {
     }
   }
 
+  async getEnhancedGroupBalances(req, res, next) {
+    try {
+        const result = await expenseService.getEnhancedGroupBalances(req.group._id, req.user.id);
+        
+        responseHelper.success(
+        res,
+        'Enhanced group balances retrieved successfully',
+        result
+        );
+    } catch (error) {
+        next(error);
+    }
+  }
+
+  async getDetailedUserBalance(req, res, next) {
+    try {
+        const { userId } = req.params;
+        const result = await expenseService.getDetailedUserBalance(
+        req.group._id, 
+        userId || req.user.id, 
+        req.user.id
+        );
+        
+        responseHelper.success(
+        res,
+        'Detailed user balance retrieved successfully',
+        result
+        );
+    } catch (error) {
+        if (error.message.includes('Can only view your own')) {
+        return responseHelper.forbidden(res, error.message);
+        }
+        next(error);
+    }
+  }
+
+  async validateExpenseIntegrity(req, res, next) {
+    try {
+        const result = await expenseService.validateExpenseIntegrity(req.group._id, req.user.id);
+        
+        responseHelper.success(
+        res,
+        'Expense integrity check completed',
+        result
+        );
+    } catch (error) {
+        next(error);
+    }
+  }
+
   async getExpenseStatistics(req, res, next) {
     try {
       const { period } = req.query;

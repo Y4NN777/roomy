@@ -23,7 +23,7 @@ router.get('/group/:groupId',
 router.get('/group/:groupId/balances', 
   authenticateToken, 
   verifyGroupMembership, 
-  expenseController.getGroupBalances
+  expenseController.getEnhancedGroupBalances
 );
 
 router.get('/group/:groupId/statistics', 
@@ -51,8 +51,21 @@ router.delete('/:expenseId',
 
 // Split payment routes
 router.patch('/:expenseId/splits/:memberId/pay', 
-  authenticateToken, 
+  authenticateToken,
   expenseController.markSplitPaid
+);
+
+router.get('/group/:groupId/balances/detailed/:userId?', 
+  authenticateToken, 
+  verifyGroupMembership, 
+  expenseController.getDetailedUserBalance
+);
+
+// Integrity check route (useful for debugging)
+router.get('/group/:groupId/integrity', 
+  authenticateToken, 
+  verifyGroupMembership, 
+  expenseController.validateExpenseIntegrity
 );
 
 module.exports = router;

@@ -391,6 +391,33 @@ const expenseSchemas = {
       .optional()
       .allow(''),
   }),
+
+  createExpenseWithCustomSplits: Joi.object({
+    groupId: Joi.string().required(),
+    amount: Joi.number().positive().precision(2).required(),
+    description: Joi.string().trim().min(1).max(500).required(),
+    category: Joi.string().valid('groceries', 'utilities', 'rent', 'maintenance', 'entertainment', 'other').optional(),
+    date: Joi.date().optional().max('now'),
+    notes: Joi.string().trim().max(1000).optional().allow(''),
+    
+    customSplits: Joi.array().items(
+      Joi.object({
+        memberId: Joi.string().required(),
+        amount: Joi.number().positive().precision(2).optional(),
+        percentage: Joi.number().min(0).max(100).precision(2).optional()
+      }).xor('amount', 'percentage') // Either amount OR percentage, not both
+    ).optional()
+  }),
+
+  setCustomSplits: Joi.object({
+    splits: Joi.array().items(
+      Joi.object({
+        memberId: Joi.string().required(),
+        amount: Joi.number().positive().precision(2).optional(),
+        percentage: Joi.number().min(0).max(100).precision(2).optional()
+      }).xor('amount', 'percentage')
+    ).required().min(1)
+  }),  
 };
 
 module.exports = {

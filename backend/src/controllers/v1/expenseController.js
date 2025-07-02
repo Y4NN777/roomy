@@ -202,6 +202,128 @@ class ExpenseController {
     }
   }
 
+  async setCustomSplits(req, res, next) {
+    try {
+      const { expenseId } = req.params;
+      const { splits } = req.body;
+      
+      const expense = await expenseService.setCustomSplits(expenseId, splits, req.user.id);
+      
+      responseHelper.success(
+        res,
+        'Custom splits set successfully',
+        { expense }
+      );
+    } catch (error) {
+      if (error.message === 'Expense not found') {
+        return responseHelper.notFound(res, error.message);
+      }
+      if (error.message.includes('Only admins') || error.message.includes('permissions')) {
+        return responseHelper.forbidden(res, error.message);
+      }
+      if (error.message.includes('must add up') || error.message.includes('must include')) {
+        return responseHelper.error(res, error.message, 400, 'INVALID_SPLITS');
+      }
+      next(error);
+    }
+  }
+
+  async resetToEqualSplits(req, res, next) {
+    try {
+      const { expenseId } = req.params;
+      
+      const expense = await expenseService.resetToEqualSplits(expenseId, req.user.id);
+      
+      responseHelper.success(
+        res,
+        'Splits reset to equal successfully',
+        { expense }
+      );
+    } catch (error) {
+      if (error.message === 'Expense not found') {
+        return responseHelper.notFound(res, error.message);
+      }
+      if (error.message.includes('Only admins')) {
+        return responseHelper.forbidden(res, error.message);
+      }
+      next(error);
+    }
+  }
+
+  async getExpenseSummary(req, res, next) {
+    try {
+      const { expenseId } = req.params;
+      
+      const result = await expenseService.getExpenseSummary(expenseId, req.user.id);
+      
+      responseHelper.success(
+        res,
+        'Expense summary retrieved successfully',
+        result
+      );
+    } catch (error) {
+      if (error.message === 'Expense not found') {
+        return responseHelper.notFound(res, error.message);
+      }
+      next(error);
+    }
+  }
+
+  async createExpenseWithCustomSplits(req, res, next) {
+    try {
+      const { customSplits, ...expenseData } = req.body;
+      
+      const expense = await expenseService.createExpenseWithCustomSplits(
+        expenseData, 
+        req.user.id, 
+        customSplits
+      );
+      
+      responseHelper.success(
+        res,
+        'Expense created successfully',
+        { expense },
+        201
+      );
+    } catch (error) {
+      if (error.message.includes('Group not found')) {
+        return responseHelper.notFound(res, error.message);
+      }
+      if (error.message.includes('must add up') || error.message.includes('must include')) {
+        return responseHelper.error(res, error.message, 400, 'INVALID_SPLITS');
+      }
+      next(error);
+    }
+  }
+
+  async getUnpaidExpenses(req, res, next) {
+    try {
+      const result = await expenseService.getUnpaidExpenses(req.group._id, req.user.id);
+      
+      responseHelper.success(
+        res,
+        'Unpaid expenses retrieved successfully',
+        result
+      );
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getMyOwedAmount(req, res, next) {
+    try {
+      const result = await expenseService.getUserOwedAmount(req.group._id, req.user.id);
+      
+      responseHelper.success(
+        res,
+        'Your owed amount retrieved successfully',
+        result
+      );
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async getExpenseStatistics(req, res, next) {
     try {
       const { period } = req.query;

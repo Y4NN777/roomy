@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../core/app_colors.dart';
+import '../../services/group_service.dart';
+import '../../widgets/auth/custom_button.dart';
 
+/// Screen for users to join or create a group.
+/// Uses animations and modal bottom sheets for input.
 class GroupSetupPage extends StatefulWidget {
   const GroupSetupPage({Key? key}) : super(key: key);
 
@@ -15,20 +20,17 @@ class _GroupSetupPageState extends State<GroupSetupPage>
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
 
-  // Custom colors
-  static const Color primaryOrange = Color(0xFFF97316);
-  static const Color primaryBlue = Color(0xFF03339C);
-  static const Color white = Color(0xFFFFFFFF);
+  final GroupService _groupService = GroupService();
 
   @override
   void initState() {
     super.initState();
-    
+
     _fadeController = AnimationController(
       duration: const Duration(milliseconds: 1200),
       vsync: this,
     );
-    
+
     _slideController = AnimationController(
       duration: const Duration(milliseconds: 1000),
       vsync: this,
@@ -64,7 +66,7 @@ class _GroupSetupPageState extends State<GroupSetupPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: white,
+      backgroundColor: AppColors.white,
       body: SafeArea(
         child: FadeTransition(
           opacity: _fadeAnimation,
@@ -75,7 +77,7 @@ class _GroupSetupPageState extends State<GroupSetupPage>
               child: Column(
                 children: [
                   const SizedBox(height: 60),
-                  
+
                   // Main Content
                   Expanded(
                     child: Column(
@@ -83,20 +85,20 @@ class _GroupSetupPageState extends State<GroupSetupPage>
                       children: [
                         // Icon Section
                         _buildIconSection(),
-                        
+
                         const SizedBox(height: 40),
-                        
+
                         // Title and Description
                         _buildTitleSection(),
-                        
+
                         const SizedBox(height: 60),
-                        
+
                         // Buttons Section
                         _buildButtonsSection(),
                       ],
                     ),
                   ),
-                  
+
                   const SizedBox(height: 40),
                 ],
               ),
@@ -120,10 +122,10 @@ class _GroupSetupPageState extends State<GroupSetupPage>
             height: 120,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: primaryBlue.withOpacity(0.1),
+              color: AppColors.primaryBlue.withOpacity(0.1),
               boxShadow: [
                 BoxShadow(
-                  color: primaryBlue.withOpacity(0.1),
+                  color: AppColors.primaryBlue.withOpacity(0.1),
                   blurRadius: 30,
                   offset: const Offset(0, 10),
                 ),
@@ -133,7 +135,7 @@ class _GroupSetupPageState extends State<GroupSetupPage>
               child: Icon(
                 Icons.group_outlined,
                 size: 50,
-                color: primaryBlue,
+                color: AppColors.primaryBlue,
               ),
             ),
           ),
@@ -153,24 +155,24 @@ class _GroupSetupPageState extends State<GroupSetupPage>
           child: Opacity(
             opacity: value,
             child: Column(
-              children: [
-                const Text(
+              children: const [
+                Text(
                   'Join or Create Group',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 32,
                     fontWeight: FontWeight.bold,
-                    color: primaryBlue,
+                    color: AppColors.primaryBlue,
                     height: 1.2,
                   ),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 Text(
                   'Connect with your roommates to get started',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 18,
-                    color: primaryBlue.withOpacity(0.7),
+                    color: AppColors.primaryBlue,
                     fontWeight: FontWeight.w500,
                     height: 1.4,
                   ),
@@ -186,106 +188,20 @@ class _GroupSetupPageState extends State<GroupSetupPage>
   Widget _buildButtonsSection() {
     return Column(
       children: [
-        // Create New Group Button
-        TweenAnimationBuilder<double>(
-          duration: const Duration(milliseconds: 1200),
-          tween: Tween(begin: 0.0, end: 1.0),
-          curve: Curves.elasticOut,
-          builder: (context, value, child) {
-            return Transform.scale(
-              scale: value,
-              child: Container(
-                width: double.infinity,
-                height: 60,
-                decoration: BoxDecoration(
-                  color: primaryBlue,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: primaryBlue.withOpacity(0.3),
-                      blurRadius: 20,
-                      offset: const Offset(0, 10),
-                    ),
-                  ],
-                ),
-                child: ElevatedButton(
-                  onPressed: () {
-                    HapticFeedback.lightImpact();
-                    _handleCreateGroup();
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryBlue,
-                    shadowColor: Colors.transparent,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                  child: const Text(
-                    'Create New Group',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: white,
-                    ),
-                  ),
-                ),
-              ),
-            );
-          },
+        CustomButton(
+          text: 'Create New Group',
+          onPressed: _handleCreateGroup,
+          animationDelay: 200,
+          backgroundColor: AppColors.primaryBlue,
+          textColor: AppColors.white,
         ),
-        
         const SizedBox(height: 20),
-        
-        // Join Existing Group Button
-        TweenAnimationBuilder<double>(
-          duration: const Duration(milliseconds: 1400),
-          tween: Tween(begin: 0.0, end: 1.0),
-          curve: Curves.elasticOut,
-          builder: (context, value, child) {
-            return Transform.scale(
-              scale: value,
-              child: Container(
-                width: double.infinity,
-                height: 60,
-                decoration: BoxDecoration(
-                  color: white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: primaryBlue,
-                    width: 2,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: primaryBlue.withOpacity(0.1),
-                      blurRadius: 15,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
-                ),
-                child: ElevatedButton(
-                  onPressed: () {
-                    HapticFeedback.lightImpact();
-                    _handleJoinGroup();
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: white,
-                    shadowColor: Colors.transparent,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                  child: const Text(
-                    'Join Existing Group',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: primaryBlue,
-                    ),
-                  ),
-                ),
-              ),
-            );
-          },
+        CustomButton(
+          text: 'Join Existing Group',
+          onPressed: _handleJoinGroup,
+          animationDelay: 400,
+          backgroundColor: AppColors.white,
+          textColor: AppColors.primaryBlue,
         ),
       ],
     );
@@ -309,9 +225,9 @@ class _GroupSetupPageState extends State<GroupSetupPage>
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
         height: MediaQuery.of(context).size.height * 0.7,
-        decoration: const BoxDecoration(
-          color: white,
-          borderRadius: BorderRadius.only(
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: const BorderRadius.only(
             topLeft: Radius.circular(24),
             topRight: Radius.circular(24),
           ),
@@ -332,36 +248,36 @@ class _GroupSetupPageState extends State<GroupSetupPage>
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: primaryBlue.withOpacity(0.3),
+                    color: AppColors.primaryBlue.withOpacity(0.3),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 24),
-              
+
               // Title
               const Text(
                 'Create New Group',
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  color: primaryBlue,
+                  color: AppColors.primaryBlue,
                 ),
               ),
-              
+
               const SizedBox(height: 8),
-              
+
               Text(
                 'Set up your shared living space',
                 style: TextStyle(
                   fontSize: 16,
-                  color: primaryBlue.withOpacity(0.7),
+                  color: AppColors.primaryBlue.withOpacity(0.7),
                 ),
               ),
-              
+
               const SizedBox(height: 32),
-              
+
               // Group Name Field
               _buildModalTextField(
                 controller: groupNameController,
@@ -369,9 +285,9 @@ class _GroupSetupPageState extends State<GroupSetupPage>
                 hint: 'e.g., Sunset Apartment',
                 icon: Icons.home_outlined,
               ),
-              
+
               const SizedBox(height: 20),
-              
+
               // Group Description Field
               _buildModalTextField(
                 controller: groupDescriptionController,
@@ -380,49 +296,32 @@ class _GroupSetupPageState extends State<GroupSetupPage>
                 icon: Icons.description_outlined,
                 maxLines: 3,
               ),
-              
+
               const Spacer(),
-              
+
               // Create Button
-              Container(
-                width: double.infinity,
-                height: 56,
-                decoration: BoxDecoration(
-                  color: primaryOrange,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: primaryOrange.withOpacity(0.3),
-                      blurRadius: 15,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: ElevatedButton(
-                  onPressed: () {
-                    if (groupNameController.text.isNotEmpty) {
-                      Navigator.pop(context);
-                      _navigateToMainApp();
-                    } else {
-                      _showSnackBar('Please enter a group name');
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryOrange,
-                    shadowColor: Colors.transparent,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                  child: const Text(
-                    'Create Group',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: white,
-                    ),
-                  ),
-                ),
+              CustomButton(
+                text: 'Create Group',
+                onPressed: () async {
+                  if (groupNameController.text.isEmpty) {
+                    _showSnackBar('Please enter a group name');
+                    return;
+                  }
+                  final success = await _groupService.createGroup(
+                    groupNameController.text,
+                    groupDescriptionController.text.isEmpty
+                        ? null
+                        : groupDescriptionController.text,
+                  );
+                  if (success) {
+                    Navigator.pop(context);
+                    _navigateToMainApp();
+                  } else {
+                    _showSnackBar('Failed to create group. Please try again.');
+                  }
+                },
+                backgroundColor: AppColors.primaryOrange,
+                textColor: AppColors.white,
               ),
             ],
           ),
@@ -440,9 +339,9 @@ class _GroupSetupPageState extends State<GroupSetupPage>
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
         height: MediaQuery.of(context).size.height * 0.6,
-        decoration: const BoxDecoration(
-          color: white,
-          borderRadius: BorderRadius.only(
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: const BorderRadius.only(
             topLeft: Radius.circular(24),
             topRight: Radius.circular(24),
           ),
@@ -463,36 +362,36 @@ class _GroupSetupPageState extends State<GroupSetupPage>
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: primaryBlue.withOpacity(0.3),
+                    color: AppColors.primaryBlue.withOpacity(0.3),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 24),
-              
+
               // Title
               const Text(
                 'Join Existing Group',
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  color: primaryBlue,
+                  color: AppColors.primaryBlue,
                 ),
               ),
-              
+
               const SizedBox(height: 8),
-              
+
               Text(
                 'Enter the group code shared by your roommate',
                 style: TextStyle(
                   fontSize: 16,
-                  color: primaryBlue.withOpacity(0.7),
+                  color: AppColors.primaryBlue.withOpacity(0.7),
                 ),
               ),
-              
+
               const SizedBox(height: 32),
-              
+
               // Group Code Field
               _buildModalTextField(
                 controller: groupCodeController,
@@ -500,17 +399,17 @@ class _GroupSetupPageState extends State<GroupSetupPage>
                 hint: 'e.g., APT2024',
                 icon: Icons.qr_code_2_outlined,
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               // Info message
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: primaryOrange.withOpacity(0.1),
+                  color: AppColors.primaryOrange.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: primaryOrange.withOpacity(0.2),
+                    color: AppColors.primaryOrange.withOpacity(0.2),
                     width: 1,
                   ),
                 ),
@@ -518,7 +417,7 @@ class _GroupSetupPageState extends State<GroupSetupPage>
                   children: [
                     Icon(
                       Icons.info_outline,
-                      color: primaryOrange,
+                      color: AppColors.primaryOrange,
                       size: 20,
                     ),
                     const SizedBox(width: 12),
@@ -527,7 +426,7 @@ class _GroupSetupPageState extends State<GroupSetupPage>
                         'Ask your roommate for the group code to join their existing group.',
                         style: TextStyle(
                           fontSize: 14,
-                          color: primaryOrange,
+                          color: AppColors.primaryOrange,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -535,49 +434,27 @@ class _GroupSetupPageState extends State<GroupSetupPage>
                   ],
                 ),
               ),
-              
+
               const Spacer(),
-              
+
               // Join Button
-              Container(
-                width: double.infinity,
-                height: 56,
-                decoration: BoxDecoration(
-                  color: primaryOrange,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: primaryOrange.withOpacity(0.3),
-                      blurRadius: 15,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: ElevatedButton(
-                  onPressed: () {
-                    if (groupCodeController.text.isNotEmpty) {
-                      Navigator.pop(context);
-                      _navigateToMainApp();
-                    } else {
-                      _showSnackBar('Please enter a group code');
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryOrange,
-                    shadowColor: Colors.transparent,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                  child: const Text(
-                    'Join Group',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: white,
-                    ),
-                  ),
-                ),
+              CustomButton(
+                text: 'Join Group',
+                onPressed: () async {
+                  if (groupCodeController.text.isEmpty) {
+                    _showSnackBar('Please enter a group code');
+                    return;
+                  }
+                  final success = await _groupService.joinGroup(groupCodeController.text);
+                  if (success) {
+                    Navigator.pop(context);
+                    _navigateToMainApp();
+                  } else {
+                    _showSnackBar('Failed to join group. Please try again.');
+                  }
+                },
+                backgroundColor: AppColors.primaryOrange,
+                textColor: AppColors.white,
               ),
             ],
           ),
@@ -595,10 +472,10 @@ class _GroupSetupPageState extends State<GroupSetupPage>
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: primaryBlue.withOpacity(0.02),
+        color: AppColors.primaryBlue.withOpacity(0.02),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: primaryBlue.withOpacity(0.1),
+          color: AppColors.primaryBlue.withOpacity(0.1),
           width: 1,
         ),
       ),
@@ -608,28 +485,28 @@ class _GroupSetupPageState extends State<GroupSetupPage>
         style: const TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.w500,
-          color: primaryBlue,
+          color: AppColors.primaryBlue,
         ),
         decoration: InputDecoration(
           labelText: label,
           hintText: hint,
           labelStyle: TextStyle(
-            color: primaryBlue.withOpacity(0.6),
+            color: AppColors.primaryBlue.withOpacity(0.6),
             fontWeight: FontWeight.w500,
           ),
           hintStyle: TextStyle(
-            color: primaryBlue.withOpacity(0.4),
+            color: AppColors.primaryBlue.withOpacity(0.4),
           ),
           prefixIcon: Container(
             margin: const EdgeInsets.all(12),
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: primaryOrange,
+              color: AppColors.primaryOrange,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
               icon,
-              color: white,
+              color: AppColors.white,
               size: 20,
             ),
           ),
@@ -644,12 +521,12 @@ class _GroupSetupPageState extends State<GroupSetupPage>
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(16),
             borderSide: const BorderSide(
-              color: primaryOrange,
+              color: AppColors.primaryOrange,
               width: 2,
             ),
           ),
           filled: true,
-          fillColor: white,
+          fillColor: AppColors.white,
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 20,
             vertical: 20,
@@ -663,7 +540,7 @@ class _GroupSetupPageState extends State<GroupSetupPage>
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: primaryOrange,
+        backgroundColor: AppColors.primaryOrange,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
@@ -675,7 +552,7 @@ class _GroupSetupPageState extends State<GroupSetupPage>
   void _navigateToMainApp() {
     // Show success message
     _showSnackBar('Group setup completed successfully!');
-    
+
     // Navigate to main app after a short delay
     Future.delayed(const Duration(milliseconds: 1500), () {
       if (mounted) {

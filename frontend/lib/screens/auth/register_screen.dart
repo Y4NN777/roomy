@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../widgets/auth/animated_text_field.dart';
+import '../../widgets/auth/custom_button.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({Key? key}) : super(key: key);
@@ -34,12 +36,12 @@ class _RegisterPageState extends State<RegisterPage>
   @override
   void initState() {
     super.initState();
-    
+
     _fadeController = AnimationController(
       duration: const Duration(milliseconds: 1000),
       vsync: this,
     );
-    
+
     _slideController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
@@ -91,15 +93,15 @@ class _RegisterPageState extends State<RegisterPage>
               child: Column(
                 children: [
                   const SizedBox(height: 20),
-                  
+
                   // Back Button and Header
                   _buildHeader(context),
-                  
+
                   const SizedBox(height: 40),
-                  
+
                   // Main Content
                   _buildMainContent(),
-                  
+
                   const SizedBox(height: 30),
                 ],
               ),
@@ -139,9 +141,9 @@ class _RegisterPageState extends State<RegisterPage>
             ),
           ],
         ),
-        
+
         const SizedBox(height: 30),
-        
+
         // Welcome Text
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
@@ -200,7 +202,7 @@ class _RegisterPageState extends State<RegisterPage>
         child: Column(
           children: [
             // Name Field
-            _buildAnimatedTextField(
+            AnimatedTextField(
               controller: _nameController,
               label: 'Full Name',
               icon: Icons.person_outline_rounded,
@@ -215,11 +217,11 @@ class _RegisterPageState extends State<RegisterPage>
                 return null;
               },
             ),
-            
+
             const SizedBox(height: 20),
-            
+
             // Email Field
-            _buildAnimatedTextField(
+            AnimatedTextField(
               controller: _emailController,
               label: 'Email Address',
               icon: Icons.email_outlined,
@@ -229,17 +231,17 @@ class _RegisterPageState extends State<RegisterPage>
                 if (value?.isEmpty ?? true) {
                   return 'Please enter your email';
                 }
-                if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value!)) {
+                if (!RegExp(r'^[\\w-\\.]+@([\\w-]+\\.)+[\\w-]{2,4}\$').hasMatch(value!)) {
                   return 'Please enter a valid email';
                 }
                 return null;
               },
             ),
-            
+
             const SizedBox(height: 20),
-            
+
             // Password Field
-            _buildAnimatedTextField(
+            AnimatedTextField(
               controller: _passwordController,
               label: 'Password',
               icon: Icons.lock_outline_rounded,
@@ -261,11 +263,11 @@ class _RegisterPageState extends State<RegisterPage>
                 return null;
               },
             ),
-            
+
             const SizedBox(height: 20),
-            
+
             // Confirm Password Field
-            _buildAnimatedTextField(
+            AnimatedTextField(
               controller: _confirmPasswordController,
               label: 'Confirm Password',
               icon: Icons.lock_outline_rounded,
@@ -287,137 +289,31 @@ class _RegisterPageState extends State<RegisterPage>
                 return null;
               },
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             // Terms and Conditions
             _buildTermsCheckbox(),
-            
+
             const SizedBox(height: 32),
-            
+
             // Register Button
-            _buildRegisterButton(),
-            
+            CustomButton(
+              text: 'Create Account',
+              onPressed: _isLoading ? null : _handleRegister,
+              isLoading: _isLoading,
+              animationDelay: 1400,
+              backgroundColor: primaryOrange,
+              textColor: white,
+            ),
+
             const SizedBox(height: 24),
-            
+
             // Login Link
             _buildLoginLink(),
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildAnimatedTextField({
-    required TextEditingController controller,
-    required String label,
-    required IconData icon,
-    bool isPassword = false,
-    bool isVisible = false,
-    VoidCallback? onVisibilityToggle,
-    TextInputType? keyboardType,
-    int delay = 0,
-    String? Function(String?)? validator,
-  }) {
-    return TweenAnimationBuilder<double>(
-      duration: Duration(milliseconds: 500 + delay),
-      tween: Tween(begin: 0.0, end: 1.0),
-      curve: Curves.elasticOut,
-      builder: (context, value, child) {
-        return Transform.translate(
-          offset: Offset(0, 50 * (1 - value)),
-          child: Opacity(
-            opacity: value,
-            child: Container(
-              decoration: BoxDecoration(
-                color: primaryBlue.withOpacity(0.02),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: primaryBlue.withOpacity(0.1),
-                  width: 1,
-                ),
-              ),
-              child: TextFormField(
-                controller: controller,
-                obscureText: isPassword && !isVisible,
-                keyboardType: keyboardType,
-                validator: validator,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                  color: primaryBlue,
-                ),
-                decoration: InputDecoration(
-                  labelText: label,
-                  labelStyle: TextStyle(
-                    color: primaryBlue.withOpacity(0.6),
-                    fontWeight: FontWeight.w500,
-                  ),
-                  prefixIcon: Container(
-                    margin: const EdgeInsets.all(12),
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: primaryOrange,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      icon,
-                      color: white,
-                      size: 20,
-                    ),
-                  ),
-                  suffixIcon: isPassword
-                      ? IconButton(
-                          onPressed: onVisibilityToggle,
-                          icon: Icon(
-                            isVisible
-                                ? Icons.visibility_rounded
-                                : Icons.visibility_off_rounded,
-                            color: primaryBlue.withOpacity(0.6),
-                          ),
-                        )
-                      : null,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide.none,
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide.none,
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: const BorderSide(
-                      color: primaryOrange,
-                      width: 2,
-                    ),
-                  ),
-                  errorBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: const BorderSide(
-                      color: Colors.red,
-                      width: 2,
-                    ),
-                  ),
-                  focusedErrorBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: const BorderSide(
-                      color: Colors.red,
-                      width: 2,
-                    ),
-                  ),
-                  filled: true,
-                  fillColor: white,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 20,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        );
-      },
     );
   }
 
@@ -479,61 +375,6 @@ class _RegisterPageState extends State<RegisterPage>
                 ),
               ),
             ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildRegisterButton() {
-    return TweenAnimationBuilder<double>(
-      duration: const Duration(milliseconds: 1400),
-      tween: Tween(begin: 0.0, end: 1.0),
-      curve: Curves.elasticOut,
-      builder: (context, value, child) {
-        return Transform.scale(
-          scale: value,
-          child: Container(
-            width: double.infinity,
-            height: 60,
-            decoration: BoxDecoration(
-              color: primaryOrange,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: primaryOrange.withOpacity(0.3),
-                  blurRadius: 20,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-            ),
-            child: ElevatedButton(
-              onPressed: _isLoading ? null : _handleRegister,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: primaryOrange,
-                shadowColor: Colors.transparent,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-              ),
-              child: _isLoading
-                  ? const SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(
-                        color: white,
-                        strokeWidth: 2,
-                      ),
-                    )
-                  : const Text(
-                      'Create Account',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: white,
-                      ),
-                    ),
-            ),
           ),
         );
       },

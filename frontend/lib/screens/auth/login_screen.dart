@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../core/app_colors.dart';
+import '../../services/auth_service.dart';
+import '../../widgets/auth/animated_text_field.dart';
+import '../../widgets/auth/custom_button.dart';
 
+/// Login screen with animated form fields and login logic separated into AuthService.
 class LoginPage extends StatefulWidget {
   const LoginPage({Key? key}) : super(key: key);
 
@@ -8,8 +13,7 @@ class LoginPage extends StatefulWidget {
   State<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginPageState extends State<LoginPage>
-    with TickerProviderStateMixin {
+class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -22,20 +26,17 @@ class _LoginPageState extends State<LoginPage>
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
 
-  // Custom colors
-  static const Color primaryOrange = Color(0xFFF97316);
-  static const Color primaryBlue = Color(0xFF03339C);
-  static const Color white = Color(0xFFFFFFFF);
+  final AuthService _authService = AuthService();
 
   @override
   void initState() {
     super.initState();
-    
+
     _fadeController = AnimationController(
       duration: const Duration(milliseconds: 1000),
       vsync: this,
     );
-    
+
     _slideController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
@@ -73,7 +74,7 @@ class _LoginPageState extends State<LoginPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: white,
+      backgroundColor: AppColors.white,
       body: SafeArea(
         child: FadeTransition(
           opacity: _fadeAnimation,
@@ -85,15 +86,15 @@ class _LoginPageState extends State<LoginPage>
               child: Column(
                 children: [
                   const SizedBox(height: 20),
-                  
+
                   // Back Button and Header
                   _buildHeader(context),
-                  
+
                   const SizedBox(height: 60),
-                  
+
                   // Main Content
                   _buildMainContent(),
-                  
+
                   const SizedBox(height: 30),
                 ],
               ),
@@ -112,11 +113,11 @@ class _LoginPageState extends State<LoginPage>
           children: [
             Container(
               decoration: BoxDecoration(
-                color: white,
+                color: AppColors.white,
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: primaryBlue.withOpacity(0.1),
+                    color: AppColors.primaryBlue.withOpacity(0.1),
                     blurRadius: 10,
                     offset: const Offset(0, 5),
                   ),
@@ -126,21 +127,21 @@ class _LoginPageState extends State<LoginPage>
                 onPressed: () => Navigator.pop(context),
                 icon: const Icon(
                   Icons.arrow_back_ios_rounded,
-                  color: primaryBlue,
+                  color: AppColors.primaryBlue,
                   size: 20,
                 ),
               ),
             ),
           ],
         ),
-        
+
         const SizedBox(height: 40),
-        
+
         // Welcome Back Section
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
           decoration: BoxDecoration(
-            color: primaryBlue.withOpacity(0.05),
+            color: AppColors.primaryBlue.withOpacity(0.05),
             borderRadius: BorderRadius.circular(20),
           ),
           child: Column(
@@ -152,13 +153,13 @@ class _LoginPageState extends State<LoginPage>
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: primaryOrange,
+                    color: AppColors.primaryOrange,
                     width: 2,
                   ),
-                  color: white,
+                  color: AppColors.white,
                   boxShadow: [
                     BoxShadow(
-                      color: primaryOrange.withOpacity(0.1),
+                      color: AppColors.primaryOrange.withOpacity(0.1),
                       blurRadius: 15,
                       offset: const Offset(0, 5),
                     ),
@@ -173,7 +174,7 @@ class _LoginPageState extends State<LoginPage>
                           style: TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
-                            color: primaryOrange,
+                            color: AppColors.primaryOrange,
                           ),
                         ),
                         TextSpan(
@@ -181,7 +182,7 @@ class _LoginPageState extends State<LoginPage>
                           style: TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
-                            color: primaryOrange,
+                            color: AppColors.primaryOrange,
                           ),
                         ),
                         TextSpan(
@@ -189,7 +190,7 @@ class _LoginPageState extends State<LoginPage>
                           style: TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
-                            color: primaryBlue,
+                            color: AppColors.primaryBlue,
                           ),
                         ),
                       ],
@@ -197,15 +198,15 @@ class _LoginPageState extends State<LoginPage>
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 20),
-              
+
               const Text(
                 'Welcome Back!',
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
-                  color: primaryBlue,
+                  color: AppColors.primaryBlue,
                 ),
               ),
               const SizedBox(height: 8),
@@ -214,7 +215,7 @@ class _LoginPageState extends State<LoginPage>
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 16,
-                  color: primaryBlue.withOpacity(0.7),
+                  color: AppColors.primaryBlue.withOpacity(0.7),
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -229,16 +230,16 @@ class _LoginPageState extends State<LoginPage>
     return Container(
       padding: const EdgeInsets.all(28),
       decoration: BoxDecoration(
-        color: white,
+        color: AppColors.white,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: primaryBlue.withOpacity(0.08),
+            color: AppColors.primaryBlue.withOpacity(0.08),
             blurRadius: 30,
             offset: const Offset(0, 15),
           ),
           BoxShadow(
-            color: primaryOrange.withOpacity(0.05),
+            color: AppColors.primaryOrange.withOpacity(0.05),
             blurRadius: 20,
             offset: const Offset(0, 5),
           ),
@@ -249,7 +250,7 @@ class _LoginPageState extends State<LoginPage>
         child: Column(
           children: [
             // Email Field
-            _buildAnimatedTextField(
+            AnimatedTextField(
               controller: _emailController,
               label: 'Email Address',
               icon: Icons.email_outlined,
@@ -259,17 +260,17 @@ class _LoginPageState extends State<LoginPage>
                 if (value?.isEmpty ?? true) {
                   return 'Please enter your email';
                 }
-                if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value!)) {
+                if (!RegExp(r'^[\\w-\\.]+@([\\w-]+\\.)+[\\w-]{2,4}\$').hasMatch(value!)) {
                   return 'Please enter a valid email';
                 }
                 return null;
               },
             ),
-            
+
             const SizedBox(height: 20),
-            
+
             // Password Field
-            _buildAnimatedTextField(
+            AnimatedTextField(
               controller: _passwordController,
               label: 'Password',
               icon: Icons.lock_outline_rounded,
@@ -288,187 +289,26 @@ class _LoginPageState extends State<LoginPage>
                 return null;
               },
             ),
-            
+
             const SizedBox(height: 32),
-            
+
             // Login Button
-            _buildLoginButton(),
-            
+            CustomButton(
+              text: 'Sign In',
+              onPressed: _isLoading ? null : _handleLogin,
+              isLoading: _isLoading,
+              animationDelay: 0,
+              backgroundColor: AppColors.primaryOrange,
+              textColor: AppColors.white,
+            ),
+
             const SizedBox(height: 32),
-            
+
             // Register Link
             _buildRegisterLink(),
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildAnimatedTextField({
-    required TextEditingController controller,
-    required String label,
-    required IconData icon,
-    bool isPassword = false,
-    bool isVisible = false,
-    VoidCallback? onVisibilityToggle,
-    TextInputType? keyboardType,
-    int delay = 0,
-    String? Function(String?)? validator,
-  }) {
-    return TweenAnimationBuilder<double>(
-      duration: Duration(milliseconds: 500 + delay),
-      tween: Tween(begin: 0.0, end: 1.0),
-      curve: Curves.elasticOut,
-      builder: (context, value, child) {
-        return Transform.translate(
-          offset: Offset(0, 50 * (1 - value)),
-          child: Opacity(
-            opacity: value,
-            child: Container(
-              decoration: BoxDecoration(
-                color: primaryBlue.withOpacity(0.02),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: primaryBlue.withOpacity(0.1),
-                  width: 1,
-                ),
-              ),
-              child: TextFormField(
-                controller: controller,
-                obscureText: isPassword && !isVisible,
-                keyboardType: keyboardType,
-                validator: validator,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                  color: primaryBlue,
-                ),
-                decoration: InputDecoration(
-                  labelText: label,
-                  labelStyle: TextStyle(
-                    color: primaryBlue.withOpacity(0.6),
-                    fontWeight: FontWeight.w500,
-                  ),
-                  prefixIcon: Container(
-                    margin: const EdgeInsets.all(12),
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: primaryOrange,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      icon,
-                      color: white,
-                      size: 20,
-                    ),
-                  ),
-                  suffixIcon: isPassword
-                      ? IconButton(
-                          onPressed: onVisibilityToggle,
-                          icon: Icon(
-                            isVisible
-                                ? Icons.visibility_rounded
-                                : Icons.visibility_off_rounded,
-                            color: primaryBlue.withOpacity(0.6),
-                          ),
-                        )
-                      : null,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide.none,
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide.none,
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: const BorderSide(
-                      color: primaryOrange,
-                      width: 2,
-                    ),
-                  ),
-                  errorBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: const BorderSide(
-                      color: Colors.red,
-                      width: 2,
-                    ),
-                  ),
-                  focusedErrorBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: const BorderSide(
-                      color: Colors.red,
-                      width: 2,
-                    ),
-                  ),
-                  filled: true,
-                  fillColor: white,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 20,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildLoginButton() {
-    return TweenAnimationBuilder<double>(
-      duration: const Duration(milliseconds: 1000),
-      tween: Tween(begin: 0.0, end: 1.0),
-      curve: Curves.elasticOut,
-      builder: (context, value, child) {
-        return Transform.scale(
-          scale: value,
-          child: Container(
-            width: double.infinity,
-            height: 60,
-            decoration: BoxDecoration(
-              color: primaryOrange,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: primaryOrange.withOpacity(0.3),
-                  blurRadius: 20,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-            ),
-            child: ElevatedButton(
-              onPressed: _isLoading ? null : _handleLogin,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: primaryOrange,
-                shadowColor: Colors.transparent,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-              ),
-              child: _isLoading
-                  ? const SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(
-                        color: white,
-                        strokeWidth: 2,
-                      ),
-                    )
-                  : const Text(
-                      'Sign In',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: white,
-                      ),
-                    ),
-            ),
-          ),
-        );
-      },
     );
   }
 
@@ -487,7 +327,7 @@ class _LoginPageState extends State<LoginPage>
                 "Don't have an account? ",
                 style: TextStyle(
                   fontSize: 16,
-                  color: primaryBlue.withOpacity(0.7),
+                  color: AppColors.primaryBlue.withOpacity(0.7),
                 ),
               ),
               GestureDetector(
@@ -500,7 +340,7 @@ class _LoginPageState extends State<LoginPage>
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: primaryOrange,
+                    color: AppColors.primaryOrange,
                   ),
                 ),
               ),
@@ -523,28 +363,44 @@ class _LoginPageState extends State<LoginPage>
 
     HapticFeedback.mediumImpact();
 
-    // Simulate login process
-    await Future.delayed(const Duration(seconds: 2));
+    final success = await _authService.login(
+      _emailController.text,
+      _passwordController.text,
+    );
 
     setState(() {
       _isLoading = false;
     });
 
     if (mounted) {
-      // Show success message
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Welcome back!'),
-          backgroundColor: primaryOrange,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+      if (success) {
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Welcome back!'),
+            backgroundColor: AppColors.primaryOrange,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
-        ),
-      );
+        );
 
-      // Navigate to next screen
-      Navigator.pushReplacementNamed(context, '/group-setup');
+        // Navigate to next screen
+        Navigator.pushReplacementNamed(context, '/group-setup');
+      } else {
+        // Show error message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Login failed. Please try again.'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        );
+      }
     }
   }
 }

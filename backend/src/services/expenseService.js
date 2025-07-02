@@ -1,6 +1,8 @@
 const Expense = require('../models/Expense');
 const Group = require('../models/Group');
 const logger = require('../utils/logger');
+const notificationService = require('./notificationService');
+
 
 class ExpenseService {
   async createExpense(expenseData, payerId) {
@@ -77,11 +79,6 @@ class ExpenseService {
         throw new Error('Expense not found');
       }
 
-      // REMOVE THIS CHECK - middleware already verified membership
-      // const group = await Group.findById(expense.groupId);
-      // if (!group || !group.isMember(requestingUserId)) {
-      //   throw new Error('Access denied - not a group member');
-      // }
 
       return expense.toJSON();
     } catch (error) {
@@ -101,18 +98,6 @@ class ExpenseService {
       const group = await Group.findById(expense.groupId).populate('members.userId');
       if (!group || !group.isActive) {
         throw new Error('Group not found');
-      }
-
-      // REMOVE MEMBERSHIP CHECK - middleware already verified
-      // if (!group.isMember(requestingUserId)) {
-      //   throw new Error('Access denied - not a group member');
-      // }
-
-      const userRole = group.findMember(requestingUserId).role;
-
-      // Check permissions (admin or payer can edit)
-      if (userRole !== 'admin' && expense.payerId.toString() !== requestingUserId) {
-        throw new Error('Insufficient permissions to edit this expense');
       }
 
       // Update expense
@@ -469,6 +454,224 @@ class ExpenseService {
       };
     } catch (error) {
       logger.error('Validate expense integrity error:', error);
+      throw error;
+    }
+  }
+
+
+  async setCustomSplits(expenseId, customSplits, requestingUserId) {
+    try {
+      const expense = await Expense.findById(expenseId);
+      if (!expense) {
+        throw new Error('Expense not found');
+      }
+
+      // Get group for permission checking
+      const group = await Group.findById(expense.groupId).populate('members.userId');
+      if (!group || !group.isActive) {
+        throw new Error('Group not found');
+      }
+      // Set custom splits
+      expense.setCustomSplits(customSplits);
+      await expense.save();
+
+      // Populate references
+      await expense.populate([
+        { path: 'payerId', select: 'name email profilePicture' },
+        { path: 'splits.memberId', select: 'name email profilePicture' },
+        { path: 'groupId', select: 'name' }
+      ]);
+
+      // Send notifications about split changes
+      try {
+        await notificationService.notifyExpenseSplitChanged({
+          expense,
+          updatedBy: requestingUserId,
+          groupName: group.name
+        });
+      } catch (notificationError) {
+        logger.warn('Split change notification failed:', notificationError);
+      }
+
+      logger.info(`Custom splits set for expense ${expenseId} by admin ${requestingUserId}`);
+      return expense.toJSON();
+    } catch (error) {
+      logger.error('Set custom splits error:', error);
+      throw error;
+  }
+}
+
+async resetToEqualSplits(expenseId, requestingUserId) {
+  try {
+    const expense = await Expense.findById(expenseId);
+    if (!expense) {
+      throw new Error('Expense not found');
+    }
+
+    // Get group for permission checking
+    const group = await Group.findById(expense.groupId).populate('members.userId');
+    if (!group || !group.isActive) {
+      throw new Error('Group not found');
+    }
+
+    // Reset to equal splits
+    expense.resetToEqualSplits(group.members);
+    await expense.save();
+
+    // Populate references
+    await expense.populate([
+      { path: 'payerId', select: 'name email profilePicture' },
+      { path: 'splits.memberId', select: 'name email profilePicture' },
+      { path: 'groupId', select: 'name' }
+    ]);
+
+    logger.info(`Splits reset to equal for expense ${expenseId} by admin ${requestingUserId}`);
+    return expense.toJSON();
+  } catch (error) {
+    logger.error('Reset splits error:', error);
+    throw error;
+  }
+}
+
+  async getExpenseSummary(expenseId, requestingUserId) {
+    try {
+      const expense = await Expense.findById(expenseId)
+        .populate('payerId', 'name email profilePicture')
+        .populate('splits.memberId', 'name email profilePicture')
+        .populate('groupId', 'name');
+
+      if (!expense) {
+        throw new Error('Expense not found');
+      }
+
+      return {
+        expense: expense.toJSON(),
+        summary: expense.getSummary()
+      };
+    } catch (error) {
+      logger.error('Get expense summary error:', error);
+      throw error;
+    }
+  }
+
+  async createExpenseWithCustomSplits(expenseData, payerId, customSplits = null) {
+    try {
+      // Get group with members for split calculation
+      const group = await Group.findById(expenseData.groupId).populate('members.userId');
+      if (!group || !group.isActive) {
+        throw new Error('Group not found');
+      }
+
+      // Create expense
+      const expense = new Expense({
+        ...expenseData,
+        payerId,
+      });
+
+      if (customSplits && customSplits.length > 0) {
+        // Start with equal splits, then apply custom
+        expense.calculateEqualSplits(group.members);
+        expense.setCustomSplits(customSplits);
+      } else {
+        // Default equal splits
+        expense.calculateEqualSplits(group.members);
+      }
+
+      await expense.save();
+
+      // Populate references
+      await expense.populate([
+        { path: 'payerId', select: 'name email profilePicture' },
+        { path: 'splits.memberId', select: 'name email profilePicture' },
+        { path: 'groupId', select: 'name' }
+      ]);
+
+      // Send notifications
+      try {
+        const notificationService = require('./notificationService');
+        await notificationService.notifyNewExpense({
+          expense,
+          groupName: group.name,
+          payerName: expense.payerId.name
+        });
+      } catch (notificationError) {
+        logger.warn('New expense notification failed:', notificationError);
+      }
+
+      // Update group statistics
+      await this.updateGroupExpenseStatistics(expenseData.groupId);
+
+      logger.info(`Expense created: ${expense.description} by user ${payerId}`);
+      return expense.toJSON();
+    } catch (error) {
+      logger.error('Create expense with custom splits error:', error);
+      throw error;
+    }
+  }
+
+  async getUnpaidExpenses(groupId, requestingUserId) {
+    try {
+      const filters = { isSettled: false };
+      const result = await this.getExpenses(groupId, filters, requestingUserId);
+      
+      // Add urgency indicators
+      const expensesWithUrgency = result.expenses.map(expense => {
+        const daysSinceCreated = Math.floor((new Date() - new Date(expense.createdAt)) / (1000 * 60 * 60 * 24));
+        
+        return {
+          ...expense,
+          daysSinceCreated,
+          urgency: daysSinceCreated > 7 ? 'high' : daysSinceCreated > 3 ? 'medium' : 'low'
+        };
+      });
+
+      return {
+        expenses: expensesWithUrgency,
+        total: result.total,
+        filters: result.filters,
+        summary: {
+          totalUnpaidAmount: expensesWithUrgency.reduce((sum, exp) => sum + exp.amount, 0),
+          oldestExpense: expensesWithUrgency.length > 0 ? 
+            Math.max(...expensesWithUrgency.map(exp => exp.daysSinceCreated)) : 0
+        }
+      };
+    } catch (error) {
+      logger.error('Get unpaid expenses error:', error);
+      throw error;
+    }
+  }
+
+  async getUserOwedAmount(groupId, userId) {
+    try {
+      const expenses = await Expense.find({ groupId, isSettled: false })
+        .populate('splits.memberId', 'name');
+
+      let totalOwed = 0;
+      const expenseDetails = [];
+
+      expenses.forEach(expense => {
+        const userSplit = expense.splits.find(split => 
+          split.memberId._id.toString() === userId && !split.paid
+        );
+        
+        if (userSplit) {
+          totalOwed += userSplit.amount;
+          expenseDetails.push({
+            expenseId: expense._id,
+            description: expense.description,
+            amount: userSplit.amount,
+            daysOverdue: Math.floor((new Date() - expense.date) / (1000 * 60 * 60 * 24))
+          });
+        }
+      });
+
+      return {
+        totalOwed,
+        expenseCount: expenseDetails.length,
+        expenses: expenseDetails
+      };
+    } catch (error) {
+      logger.error('Get user owed amount error:', error);
       throw error;
     }
   }

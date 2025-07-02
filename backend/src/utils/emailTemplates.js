@@ -500,6 +500,68 @@ Time remaining: ${hoursUntilDue} hours
 Don't forget to mark it complete when you're done! 🎯
       `
     };
+},
+
+expenseCreated: (data) => {
+  const { payerName, amount, description, groupName, splits } = data;
+  
+  return {
+    subject: `💰 New expense added: "${description}"`,
+    html: `
+      <h2>New Expense Added</h2>
+      <p><strong>${payerName}</strong> added a new expense in <strong>${groupName}</strong>:</p>
+      
+      <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <h3>💰 ${description}</h3>
+        <p><strong>Total Amount:</strong> $${amount}</p>
+        <p><strong>Paid by:</strong> ${payerName}</p>
+        
+        <h4>Your Share:</h4>
+        <ul>
+          ${splits.map(split => `<li>${split.memberName}: $${split.amount}</li>`).join('')}
+        </ul>
+      </div>
+
+      <p>Check the Roomy app to see the full details and mark your share as paid when you settle up!</p>
+    `,
+    text: `
+New expense added by ${payerName} in ${groupName}:
+
+💰 ${description}
+Total: $${amount}
+Your share: Check the app for details
+
+Mark your share as paid when you settle up!
+    `
+  };
+},
+
+expenseSplitChanged: (data) => {
+  const { description, updatedBy, groupName, newSplits } = data;
+  
+  return {
+    subject: `🔄 Expense split updated: "${description}"`,
+    html: `
+      <h2>Expense Split Updated</h2>
+      <p><strong>${updatedBy}</strong> updated the split for an expense in <strong>${groupName}</strong>:</p>
+      
+      <div style="background-color: #fff3cd; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <h3>💰 ${description}</h3>
+        <p><strong>New Split Breakdown:</strong></p>
+        <ul>
+          ${newSplits.map(split => `<li>${split.memberName}: $${split.amount} (${split.percentage}%)</li>`).join('')}
+        </ul>
+      </div>
+
+      <p>Check the app to see your updated share amount!</p>
+    `,
+    text: `
+Expense split updated by ${updatedBy} in ${groupName}:
+
+💰 ${description}
+Check the app to see your updated share amount!
+    `
+  };
 }
 }
 

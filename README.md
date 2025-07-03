@@ -321,12 +321,13 @@ API_VERSION=1.0
 
 | Team Member | Role | Specialization | Contact |
 |-------------|------|----------------|---------|
-| **R Yanis Axel DABO** | Software Engineer | Backend Architecture & AI Integration | [@yanis-dabo](https://github.com/Y4NN777) |
-| **Rayane BICABA** | Software Engineer | Mobile Development & User Experience | [@rayane-bicaba](https://github.com/RayaneBICABA) |
+| **R Yanis Axel DABO** | Software Engineer | Backend Architecture & AI Integration | [@Y4NN](https://github.com/Y4NN777) |
+| **Rayane BICABA** | Software Engineer | Mobile Development & User Experience | [@Ryko](https://github.com/RayaneBICABA) |
 
 ### **Academic Framework**
 
-- **Institution**: Advanced Software Engineering Program
+- **Institution**: Burkina Insititute Of Technology
+- **Major**: Computer Science, Software Engineering 
 - **Course Integration**: Mobile Operating Systems & Frameworks + XML & Web Services
 - **Project Timeline**: July 29 - August 4, 2025 (Intensive Development Sprint)
 - **Methodology**: Agile development with pair programming and collaborative ownership
@@ -357,7 +358,7 @@ flutter analyze            # Static code analysis
 
 ### **Code Quality Standards**
 
-- **Backend**: ESLint with TypeScript strict mode, Prettier formatting
+- **Backend**: ESLint with JavaScript(Node) Prettier formatting
 - **Mobile**: Flutter/Dart analyzer with custom linting rules
 - **Documentation**: Comprehensive inline documentation and external guides
 - **Version Control**: Conventional commit messages with semantic versioning
@@ -370,7 +371,7 @@ flutter analyze            # Static code analysis
 
 ```bash
 # Backend Deployment (Railway/Render)
-npm run build              # TypeScript compilation
+npm run build              # Compilation
 npm run deploy             # Production deployment
 
 # Mobile Application Build

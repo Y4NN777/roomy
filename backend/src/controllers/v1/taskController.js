@@ -6,6 +6,27 @@ class TaskController {
   async createTask(req, res, next) {
     try {
       const task = await taskService.createTask(req.body, req.user.id);
+
+
+      if (task.description && task.description.length > 20 && aiService.isAvailable()) {
+        try {
+          const groupContext = await this.getGroupContext(task.groupId, req.user.id);
+          const suggestions = await aiService.processVoiceToTasks(
+            `Related to: ${task.title} - ${task.description}`, 
+            groupContext
+          );
+          
+          // Include suggestions in response (limited to 3)
+          const limitedSuggestions = suggestions.suggestedTasks.slice(0, 3);
+          
+          return responseHelper.success(res, {
+            task,
+            aiSuggestions: limitedSuggestions.length > 0 ? limitedSuggestions : undefined
+          }, 'Task created successfully');
+        } catch (aiError) {
+          console.log('AI suggestions failed, continuing without them:', aiError.message);
+        }
+      }
       
       responseHelper.success(
         res,
@@ -23,6 +44,34 @@ class TaskController {
       next(error);
     }
   }
+
+
+  async getGroupContext(groupId, userId) {
+    try {
+      const [groupMembers, recentTasks] = await Promise.all([
+        // Your existing method to get group members
+        Group.findById(groupId).populate('members.userId', 'name'),
+        // Your existing method to get recent tasks
+        Task.find({ groupId }).sort({ createdAt: -1 }).limit(10)
+      ]);
+      
+      return {
+        groupMembers: groupMembers.members.map(member => ({
+          id: member.userId._id,
+          name: member.userId.name,
+          role: member.role
+        })),
+        recentTasks: recentTasks.map(task => ({
+          title: task.title,
+          category: task.category,
+          status: task.status
+        }))
+      };
+    } catch (error) {
+      return { groupMembers: [], recentTasks: [] };
+    }
+  }
+
 
   async getTasks(req, res, next) {
     try {

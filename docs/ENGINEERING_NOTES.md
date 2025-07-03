@@ -113,6 +113,55 @@ This document provides an overview of the current state of the Roomy backend, th
 
 ---
 
+## 3. AI System Engineering Notes
+
+- **AI Service:**
+  - Located in `src/services/aiService.js`.
+  - Uses Google Gemini 2.0 Flash via `@google/genai` for natural language to task extraction.
+  - Handles prompt construction, member mention extraction, assignment confidence, and fallback logic.
+  - Fallback system generates basic tasks if AI is unavailable or fails, using keyword templates and member mentions.
+  - Assignment detection is both explicit (e.g., "John should...") and implicit (inferred from context and confidence).
+  - All AI endpoints require authentication and group context for best results.
+  - AI model, features, and status are exposed via `/ai/status`.
+  - Development/test endpoint `/ai/test` is only available in non-production environments.
+
+- **AI Controller:**
+  - Located in `src/controllers/v1/aiController.js`.
+  - Handles all AI API endpoints: `/process-voice`, `/confirm-tasks`, `/status`, `/test`.
+  - Validates input, fetches group context, and delegates to `aiService`.
+  - On `/process-voice`, returns suggested tasks, member mentions, confidence, and metadata.
+  - On `/confirm-tasks`, validates and creates up to 10 tasks, marking them as `aiGenerated` and linking to the original input.
+  - Handles error cases, including AI unavailability and input validation.
+
+- **API Route:**
+  - Defined in `src/routes/v1/ai.js`.
+  - All routes require JWT authentication.
+  - Input validation is enforced using `express-validator` and custom middleware.
+  - Endpoints:
+    - `POST /ai/process-voice`: Main AI task extraction
+    - `POST /ai/confirm-tasks`: Confirm and create tasks
+    - `GET /ai/status`: Service/model status
+    - `POST /ai/test`: Development-only AI test
+
+- **Testing:**
+  - Unit and integration tests for AI are in `tests/services/ai.test.js`
+  - Tests cover:
+    - AI extraction and assignment
+    - Fallback system
+    - Input validation and error handling
+    - Service status and connection
+    - End-to-end API flows
+
+- **Environment:**
+  - Requires `GEMINI_API_KEY` in `.env` for AI features to be enabled.
+  - If not set, AI endpoints will return fallback or service unavailable errors.
+
+- **Frontend/Integration:**
+  - See API.md for request/response formats and integration tips.
+  - AI endpoints are designed for both voice and text input, and return rich metadata for UI/UX.
+
+---
+
 ## 4. Recommendations for Completion
 
 - **Real-Time Notifications:**

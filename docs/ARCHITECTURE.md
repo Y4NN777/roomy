@@ -5,7 +5,7 @@
 **Project:** Roommate Task Manager with AI Assistant  
 **Version:** 1.0  
 **Date:** July 2, 2025  
-**Architecture Pattern:** Layered Clean Architecture with Event-Driven Communication
+**Architecture Pattern:** Layered Clean Architecture with Event-Driven Communication formely Event-Driven Clean Architecture (EDCA) with Modular Service-Oriented Design
 
 ---
 

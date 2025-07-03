@@ -183,10 +183,125 @@ Welcome to the Roomy API! This guide provides a comprehensive, code-accurate ove
 - Use the statistics endpoint to show group productivity and member contributions.
 - Integrate note/comment features for collaborative task tracking.
 
-### 4. AI Voice Processing (Not Yet Implemented)
+### 4. AI Voice Processing & Task Extraction
 
-- Endpoints exist for AI voice/text processing, but backend logic is not yet implemented.
-- No actual AI processing or task suggestion is currently available.
+- **AI Task Extraction:** Extract actionable tasks from natural language (voice/text) input using Google Gemini AI.
+
+  - **Endpoint:** `POST /ai/process-voice`
+  - **Auth:** Required (JWT)
+  - **Body:**
+    - `text` (string, required, 1-2000 chars): The user’s input.
+    - `groupId` (optional, MongoId): Group context (defaults to user’s group).
+  - **Validation:** Fails if text is missing/empty/too long, or if user is not in a group.
+  - **Response:**
+    - `suggestedTasks`: Array of task objects (see below).
+    - `confidence`: AI confidence score.
+    - `processingTime`: ms taken.
+    - `memberMentions`: Array of detected member mentions.
+    - `metadata`: AI model, categories, assignment strategy, fallbackUsed.
+    - `groupContext`: Info about group and recent tasks.
+  - **Fallback:** If AI fails, a rule-based fallback generates basic tasks.
+
+  **Example Request:**
+
+  ```json
+  {
+    "text": "John should clean the kitchen and Sarah can buy groceries"
+  }
+  ```
+
+  **Example Response:**
+
+  ```json
+  {
+    "success": true,
+    "data": {
+      "originalText": "...",
+      "suggestedTasks": [
+        {
+          "title": "Clean the kitchen",
+          "description": "...",
+          "category": "cleaning",
+          "priority": "medium",
+          "estimatedDuration": 45,
+          "suggestedAssignee": "user_id",
+          "assignmentConfidence": 0.9,
+          "suggestedDueDate": "2025-07-06T20:00:00Z",
+          "notes": "Assigned to John as explicitly mentioned"
+        }
+      ],
+      "confidence": 0.92,
+      "processingTime": 1200,
+      "memberMentions": [
+        { "memberId": "1", "memberName": "John Doe", "mentionText": "John should", "confidence": 0.9 }
+      ],
+      "metadata": {
+        "detectedCategories": ["cleaning", "shopping"],
+        "assignmentStrategy": "explicit",
+        "aiModel": "gemini-2.0-flash-exp",
+        "fallbackUsed": false
+      },
+      "groupContext": {
+        "groupId": "group_id",
+        "memberCount": 3,
+        "recentTaskCount": 5
+      }
+    }
+  }
+  ```
+
+- **Confirm and Create AI-Suggested Tasks:**
+
+  - **Endpoint:** `POST /ai/confirm-tasks`
+  - **Auth:** Required (JWT)
+  - **Body:**
+    - `tasks` (array, required, 1-10): Each with:
+      - `title` (string, 1-200 chars, required)
+      - `description` (string, ≤1000 chars, optional)
+      - `category` (enum: cleaning, cooking, shopping, maintenance, bills, other)
+      - `priority` (enum: low, medium, high)
+      - `estimatedDuration` (int, 5-480, optional)
+      - `suggestedAssignee` (userId, optional)
+      - `suggestedDueDate` (ISO date, optional)
+      - `notes` (string, optional)
+      - `assignmentConfidence` (number, optional)
+    - `originalText` (string, optional, ≤2000 chars)
+  - **Validation:** Fails if tasks array is empty, too large, or fields are invalid.
+  - **Response:**
+    - `createdTasks`: Array of created task objects (with `aiGenerated: true`).
+    - `summary`: Success/error counts.
+
+- **AI Service Status:**
+
+  - **Endpoint:** `GET /ai/status`
+  - **Auth:** Required (JWT)
+  - **Response:**
+    - `available`: Boolean
+    - `model`: String (e.g., gemini-2.0-flash-exp)
+    - `features`: Object (taskExtraction, assignmentDetection, etc.)
+
+- **AI Test Endpoint (Development only):**
+
+  - **Endpoint:** `POST /ai/test`
+  - **Auth:** Required (JWT)
+  - **Body:** `testInput` (string, optional, ≤500 chars)
+  - **Response:** AI status and connection info.
+
+**AI Service Features:**
+
+- Uses Google Gemini 2.0 Flash for task extraction and assignment.
+- Detects member mentions and assigns tasks based on explicit/implicit language.
+- Returns confidence scores and metadata.
+- Fallback system generates basic tasks if AI is unavailable or fails.
+- Assignment, category, and priority detection are all supported.
+- All AI endpoints require authentication and group context.
+
+**Frontend Integration Tips:**
+
+- Use `/ai/process-voice` to convert user speech or text into actionable tasks.
+- Show AI confidence, assignment, and fallback status in the UI.
+- Use `/ai/confirm-tasks` to let users review and confirm AI-suggested tasks before creation.
+- Use `/ai/status` to display AI availability and features to users/admins.
 
 ### 5. Financial Management (Expenses)
 

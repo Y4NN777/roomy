@@ -49,83 +49,30 @@ class AIController {
     }
   }
   
-  // Confirm and create AI-suggested tasks
-  async confirmTasks(req, res) {
+/**
+   * Enhanced confirmTasks with event emission
+   */
+  async confirmAndCreateTasks(tasks, context = {}) {
+    const { userId, groupId, originalText } = context;
+    
     try {
-      const { tasks, originalText } = req.body;
-      const userId = req.user.id;
-      const userGroupId = req.user.groupId;
+      // Create tasks (this would call your task service)
+      const createdTasks = await this.createTasksInSystem(tasks, context);
       
-      if (!tasks || !Array.isArray(tasks) || tasks.length === 0) {
-        return responseHelper.error(res, 'Tasks array is required', 400);
-      }
+      // Emit tasks confirmed event
+      eventBus.safeEmit(EventTypes.AI_TASKS_CONFIRMED, {
+        userId,
+        groupId,
+        tasks: createdTasks,
+        originalText,
+        timestamp: new Date()
+      });
       
-      if (tasks.length > 10) {
-        return responseHelper.error(res, 'Maximum 10 tasks can be created at once', 400);
-      }
-      
-      if (!userGroupId) {
-        return responseHelper.error(res, 'User must be in a group to create tasks', 400);
-      }
-      
-      const createdTasks = [];
-      const errors = [];
-      
-      // Create each confirmed task
-      for (const [index, taskData] of tasks.entries()) {
-        try {
-          // Validate and prepare task data
-          const taskToCreate = {
-            title: taskData.title,
-            description: taskData.description || '',
-            category: taskData.category || 'other',
-            priority: taskData.priority || 'medium',
-            assignedTo: taskData.suggestedAssignee || null,
-            dueDate: taskData.suggestedDueDate || null,
-            estimatedDuration: taskData.estimatedDuration || 30,
-            groupId: userGroupId,
-            createdBy: userId,
-            aiGenerated: true,
-            originalVoiceInput: originalText,
-            aiConfidence: taskData.assignmentConfidence || 0.5,
-            notes: taskData.notes || ''
-          };
-          
-          const createdTask = await taskService.createTask(taskToCreate);
-          createdTasks.push(createdTask);
-          
-          console.log(`✅ Created AI task: "${createdTask.title}" ${createdTask.assignedTo ? `→ ${createdTask.assignedTo}` : '(unassigned)'}`);
-          
-        } catch (error) {
-          console.error(`❌ Failed to create task ${index + 1}:`, error);
-          errors.push({
-            taskIndex: index + 1,
-            taskTitle: taskData.title,
-            error: error.message
-          });
-        }
-      }
-      
-      responseHelper.success(res, {
-        createdTasks: createdTasks.map(task => ({
-          id: task._id,
-          title: task.title,
-          assignedTo: task.assignedTo,
-          category: task.category,
-          priority: task.priority,
-          aiGenerated: true
-        })),
-        summary: {
-          successCount: createdTasks.length,
-          errorCount: errors.length,
-          totalRequested: tasks.length
-        },
-        errors: errors.length > 0 ? errors : undefined
-      }, `Successfully created ${createdTasks.length} of ${tasks.length} tasks`);
+      return createdTasks;
       
     } catch (error) {
-      console.error('❌ Task confirmation error:', error);
-      responseHelper.error(res, 'Failed to create tasks', 500);
+      console.error('❌ Task creation error:', error);
+      throw error;
     }
   }
   

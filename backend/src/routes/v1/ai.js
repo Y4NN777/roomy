@@ -5,8 +5,6 @@ const authenticateToken = require('../../middleware/auth');
 const { body, query } = require('express-validator');
 const validation = require('../../middleware/validation');
 
-// Apply authentication to all AI routes
-router.use(authenticateToken);
 
 // AI input validation middleware
 const validateAIInput = [
@@ -56,7 +54,7 @@ const validateTaskConfirmation = [
 
 // Main AI endpoints
 router.post('/process-voice', validateAIInput, aiController.processVoiceInput);
-router.post('/confirm-tasks', validateTaskConfirmation, aiController.confirmTasks);
+router.post('/confirm-tasks', validateTaskConfirmation, aiController.confirmAndCreateTasks);
 
 // Utility endpoints
 router.get('/status', aiController.getStatus);

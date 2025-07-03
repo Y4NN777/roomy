@@ -18,6 +18,24 @@ const validate = (schema) => {
   };
 };
 
+
+// Add this method to handle express-validator errors (used in AI routes)
+const handleValidationErrors = (req, res, next) => {
+  const errors = validationResult(req);
+  
+  if (!errors.isEmpty()) {
+    const details = errors.array().map(error => ({
+      field: error.path || error.param,
+      message: error.msg,
+      value: error.value
+    }));
+    
+    return responseHelper.validationError(res, details);
+  }
+  
+  next();
+};
+
 // Validation schemas
 const authSchemas = {
   register: Joi.object({
@@ -426,4 +444,5 @@ module.exports = {
   groupSchemas,
   taskSchemas,
   expenseSchemas,
+  handleValidationErrors
 };

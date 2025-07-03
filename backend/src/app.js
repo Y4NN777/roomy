@@ -3,12 +3,19 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const path = require('path');
+const http = require('http');
+const webSocketService = require('./services/notifications/WebSocketService');
 
 const routes = require('./routes');
 const errorHandler = require('./middleware/errorHandler');
 const logger = require('./utils/logger');
 
 const app = express();
+const server = http.createServer(app);
+// Initialize WebSocket service with the HTTP server
+// This allows WebSocket connections to share the same server instance
+const io = webSocketService.initialize(server);
+
 
 // Trust proxy for accurate client IP
 app.set('trust proxy', 1);
@@ -42,6 +49,9 @@ app.use(express.urlencoded({ extended: true }));
 
 // Health check endpoint
 app.get('/health', (req, res) => {
+
+  const wsStats = webSocketService.getConnectionStats();
+
   res.json({
     status: 'OK',
     timestamp: new Date().toISOString(),
@@ -68,4 +78,4 @@ app.use('*', (req, res) => {
 // Global error handler (must be last)
 app.use(errorHandler);
 
-module.exports = app;
+module.exports = {app, io};

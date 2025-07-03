@@ -12,7 +12,16 @@
     "test:ai-unit": "jest tests/services/ai.test.js --verbose --detectOpenHandles",
     "test:ai-watch": "jest tests/services/ai.test.js --watch --verbose",
     "validate-ai": "node scripts/validateAISetup.js",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "test:realtime": "jest tests/services/realtime.test.js --verbose",
+    "test:integration": "node tests/scripts/test-realtime-integration.js",
+    "test:unit": "jest tests/services/realtime.test.js",
+    "test:all": "npm run test:unit && npm run test:integration",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
+    "test:e2e": "jest tests/e2e/",
+    "test:load": "jest tests/load/",
+    "test:ci": "npm run test:unit && npm run test:integration"
   },
   "dependencies": {
     "@google/genai": "^1.8.0",
@@ -31,10 +40,13 @@
     "multer": "^2.0.1",
     "node-cron": "^4.2.0",
     "nodemailer": "^7.0.4",
+    "socket.io": "^4.8.1",
     "supertest": "^7.1.1"
   },
   "devDependencies": {
-    "nodemon": "^3.1.4"
+    "@types/jest": "^29.5.4",
+    "nodemon": "^3.1.4",
+    "socket.io-client": "^4.8.1"
   },
   "keywords": [
     "roommate",

@@ -562,7 +562,208 @@ Expense split updated by ${updatedBy} in ${groupName}:
 Check the app to see your updated share amount!
     `
   };
+},
+
+
+splitPaid: (data) => {
+  const { payerName, memberName, amount, description, groupName, expenseTotal, remainingAmount, isFullySettled } = data;
+  
+  return {
+    subject: `✅ Payment received: $${amount} for "${description}"`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 0; background-color: #f5f5f5; }
+          .container { max-width: 600px; margin: 0 auto; background-color: white; border-radius: 8px; overflow: hidden; }
+          .header { background: linear-gradient(135deg, #28a745 0%, #20c997 100%); padding: 30px 20px; text-align: center; }
+          .content { padding: 30px 20px; }
+          .payment-card { background-color: #f8fff9; border-left: 4px solid #28a745; padding: 20px; margin: 20px 0; border-radius: 8px; }
+          .settlement-info { background-color: #e8f5e8; padding: 15px; border-radius: 6px; margin: 15px 0; }
+          .amount { font-size: 24px; font-weight: bold; color: #28a745; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1 style="color: white; margin: 0;">✅ Payment Received!</h1>
+          </div>
+          <div class="content">
+            <h2>Great news, ${payerName}!</h2>
+            <p><strong>${memberName}</strong> just paid their share for an expense in <strong>${groupName}</strong>:</p>
+            
+            <div class="payment-card">
+              <h3>💰 ${description}</h3>
+              <p class="amount">$${amount} received</p>
+              <p><strong>Paid by:</strong> ${memberName}</p>
+              <p><strong>Original payer:</strong> ${payerName}</p>
+            </div>
+
+            <div class="settlement-info">
+              <p><strong>Expense Status:</strong></p>
+              <p>• Total expense: $${expenseTotal}</p>
+              ${isFullySettled ? 
+                '<p style="color: #28a745; font-weight: bold;">🎉 This expense is now FULLY SETTLED!</p>' :
+                `<p>• Remaining to be paid: $${remainingAmount}</p>`
+              }
+            </div>
+
+            ${isFullySettled ? 
+              '<p>🎉 Congratulations! Everyone has paid their share for this expense.</p>' :
+              '<p>Still waiting for other members to settle their shares.</p>'
+            }
+          </div>
+        </div>
+      </body>
+      </html>
+    `,
+    text: `
+Great news, ${payerName}!
+
+${memberName} just paid their share for an expense in ${groupName}:
+
+💰 ${description}
+Amount paid: $${amount}
+Paid by: ${memberName}
+
+Expense Status:
+- Total expense: $${expenseTotal}
+${isFullySettled ? 
+  '🎉 This expense is now FULLY SETTLED!' :
+  `• Remaining to be paid: $${remainingAmount}`
 }
+
+${isFullySettled ? 
+  'Congratulations! Everyone has paid their share.' :
+  'Still waiting for other members to settle their shares.'
+}
+    `
+  };
+},
+
+expenseFullySettled: (data) => {
+  const { description, groupName, totalAmount, settledBy, allMembers } = data;
+  
+  return {
+    subject: `🎉 Expense fully settled: "${description}"`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 0; background-color: #f5f5f5; }
+          .container { max-width: 600px; margin: 0 auto; background-color: white; border-radius: 8px; overflow: hidden; }
+          .header { background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%); padding: 30px 20px; text-align: center; }
+          .content { padding: 30px 20px; }
+          .celebration-card { background-color: #fff8e1; border-left: 4px solid #ffc107; padding: 20px; margin: 20px 0; border-radius: 8px; text-align: center; }
+          .members-list { background-color: #f8f9fa; padding: 15px; border-radius: 6px; margin: 15px 0; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1 style="color: white; margin: 0;">🎉 Expense Settled!</h1>
+          </div>
+          <div class="content">
+            <div class="celebration-card">
+              <h2>All paid up! 🎉</h2>
+              <h3>💰 ${description}</h3>
+              <p><strong>Total amount: $${totalAmount}</strong></p>
+              <p><strong>Group: ${groupName}</strong></p>
+              <p style="color: #28a745; font-weight: bold;">✅ FULLY SETTLED</p>
+            </div>
+
+            <div class="members-list">
+              <p><strong>Thanks to everyone who contributed:</strong></p>
+              <ul>
+                ${allMembers.map(member => 
+                  `<li>${member.name}: $${member.amount} ${member.isPayer ? '(original payer)' : '(paid)'}</li>`
+                ).join('')}
+              </ul>
+            </div>
+
+            <p>Great teamwork, ${groupName}! This expense is now completely settled. 🙌</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `,
+    text: `
+🎉 Expense Fully Settled!
+
+💰 ${description}
+Total: $${totalAmount}
+Group: ${groupName}
+
+Thanks to everyone who contributed:
+${allMembers.map(member => 
+  `• ${member.name}: $${member.amount} ${member.isPayer ? '(original payer)' : '(paid)'}`
+).join('\n')}
+
+Great teamwork! This expense is now completely settled. 🙌
+    `
+  };
+},
+
+paymentReminder: (data) => {
+  const { memberName, amount, description, groupName, daysSinceExpense, payerName } = data;
+  
+  return {
+    subject: `🔔 Friendly reminder: $${amount} owed for "${description}"`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 0; background-color: #f5f5f5; }
+          .container { max-width: 600px; margin: 0 auto; background-color: white; border-radius: 8px; overflow: hidden; }
+          .header { background: linear-gradient(135deg, #17a2b8 0%, #007bff 100%); padding: 30px 20px; text-align: center; }
+          .content { padding: 30px 20px; }
+          .reminder-card { background-color: #e1f7fe; border-left: 4px solid #17a2b8; padding: 20px; margin: 20px 0; border-radius: 8px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1 style="color: white; margin: 0;">🔔 Payment Reminder</h1>
+          </div>
+          <div class="content">
+            <h2>Hi ${memberName}!</h2>
+            <p>Just a friendly reminder about an outstanding expense in <strong>${groupName}</strong>:</p>
+            
+            <div class="reminder-card">
+              <h3>💰 ${description}</h3>
+              <p><strong>Amount owed: $${amount}</strong></p>
+              <p><strong>Originally paid by: ${payerName}</strong></p>
+              <p><strong>Days since expense: ${daysSinceExpense}</strong></p>
+            </div>
+
+            <p>When you get a chance, please mark this as paid in the Roomy app or settle up with ${payerName}. Thanks! 😊</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `,
+    text: `
+Hi ${memberName}!
+
+Just a friendly reminder about an outstanding expense in ${groupName}:
+
+💰 ${description}
+Amount owed: $${amount}
+Originally paid by: ${payerName}
+Days since expense: ${daysSinceExpense}
+
+When you get a chance, please mark this as paid in the Roomy app or settle up with ${payerName}. Thanks! 😊
+    `
+  };
+}
+
+
 }
 
 module.exports = emailTemplates;

@@ -345,6 +345,37 @@ class ExpenseController {
       next(error);
     }
   }
+  
+  async sendPaymentReminders(req, res, next) {
+    try {
+      const { daysThreshold } = req.query;
+      const threshold = daysThreshold ? parseInt(daysThreshold) : 3;
+      
+      const result = await expenseService.sendPaymentReminders(
+        req.group._id, 
+        req.user.id, 
+        threshold
+      );
+      
+      responseHelper.success(
+        res,
+        `Payment reminders sent successfully`,
+        {
+          remindersSent: result.remindersSent,
+          unpaidExpenses: result.unpaidExpenses,
+          daysThreshold: threshold
+        }
+      );
+    } catch (error) {
+      if (error.message.includes('Only admins')) {
+        return responseHelper.forbidden(res, error.message);
+      }
+      if (error.message === 'Access denied - not a group member') {
+        return responseHelper.forbidden(res, error.message);
+      }
+      next(error);
+    }
+  }
 }
 
 module.exports = new ExpenseController();

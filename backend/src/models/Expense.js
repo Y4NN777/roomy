@@ -92,25 +92,6 @@ const expenseSchema = new mongoose.Schema({
   timestamps: true,
 });
 
-// Indexes for performance
-expenseSchema.index({ groupId: 1, date: -1 });
-expenseSchema.index({ 'splits.memberId': 1 });
-expenseSchema.index({ isSettled: 1 });
-
-// Virtual for total owed amount
-expenseSchema.virtual('totalOwed').get(function() {
-  return this.splits.reduce((total, split) => total + split.amount, 0);
-});
-
-// Virtual for settlement status
-expenseSchema.virtual('settlementStatus').get(function() {
-  const totalSplits = this.splits.length;
-  const paidSplits = this.splits.filter(split => split.paid).length;
-  
-  if (paidSplits === 0) return 'unpaid';
-  if (paidSplits === totalSplits) return 'settled';
-  return 'partially_paid';
-});
 
 // CORRECTED calculateEqualSplits method
 expenseSchema.methods.calculateEqualSplits = function(groupMembers) {
@@ -165,25 +146,137 @@ expenseSchema.methods.calculateEqualSplits = function(groupMembers) {
   return this;
 };
 
-// Method to mark split as paid
+
+expenseSchema.methods.setCustomSplits = function(customSplits) {
+  // customSplits: [{ memberId, percentage }] or [{ memberId, amount }]
+  
+  if (!customSplits || !Array.isArray(customSplits)) {
+    throw new Error('Custom splits must be an array');
+  }
+
+  // Validate that splits cover all members
+  const memberIds = this.splits.map(split => split.memberId.toString());
+  const customMemberIds = customSplits.map(split => split.memberId.toString());
+  
+  if (memberIds.length !== customMemberIds.length || 
+      !memberIds.every(id => customMemberIds.includes(id))) {
+    throw new Error('Custom splits must include all group members');
+  }
+
+  // Set split type
+  this.splitType = customSplits[0].percentage !== undefined ? 
+    CONSTANTS.EXPENSE_SPLIT_TYPE.PERCENTAGE : 
+    CONSTANTS.EXPENSE_SPLIT_TYPE.CUSTOM;
+
+  if (this.splitType === CONSTANTS.EXPENSE_SPLIT_TYPE.PERCENTAGE) {
+    // Validate percentages add up to 100
+    const totalPercentage = customSplits.reduce((sum, split) => sum + split.percentage, 0);
+    if (Math.abs(totalPercentage - 100) > 0.01) {
+      throw new Error('Percentages must add up to 100%');
+    }
+
+    // Calculate amounts based on percentages
+    customSplits.forEach(customSplit => {
+      const split = this.splits.find(s => s.memberId.toString() === customSplit.memberId.toString());
+      if (split) {
+        split.percentage = customSplit.percentage;
+        split.amount = parseFloat(((this.amount * customSplit.percentage) / 100).toFixed(2));
+        // Keep existing paid status
+      }
+    });
+  } else {
+    // Custom amounts
+    const totalAmount = customSplits.reduce((sum, split) => sum + split.amount, 0);
+    if (Math.abs(totalAmount - this.amount) > 0.01) {
+      throw new Error('Custom amounts must add up to total expense amount');
+    }
+
+    customSplits.forEach(customSplit => {
+      const split = this.splits.find(s => s.memberId.toString() === customSplit.memberId.toString());
+      if (split) {
+        split.amount = parseFloat(customSplit.amount.toFixed(2));
+        split.percentage = parseFloat(((customSplit.amount / this.amount) * 100).toFixed(2));
+        // Keep existing paid status
+      }
+    });
+  }
+
+  return this;
+};
+
+// Method to reset to equal splits
+expenseSchema.methods.resetToEqualSplits = function(groupMembers) {
+  this.splitType = CONSTANTS.EXPENSE_SPLIT_TYPE.EQUAL;
+  return this.calculateEqualSplits(groupMembers);
+};
+
+
 expenseSchema.methods.markSplitPaid = function(memberId, paidBy = null) {
   const split = this.splits.find(split => 
     split.memberId.toString() === memberId.toString()
   );
   
-  if (split) {
+  if (split && !split.paid) {
     split.paid = true;
     split.paidAt = new Date();
     
-    // Check if all splits are paid
+    // Check if all splits are now paid
     const allPaid = this.splits.every(split => split.paid);
-    if (allPaid) {
+    if (allPaid && !this.isSettled) {
       this.isSettled = true;
       this.settledAt = new Date();
+      console.log(`✅ Expense fully settled: ${this.description}`);
     }
   }
   
   return this;
+};
+
+// ENHANCE the virtual totalOwed to be more accurate:
+expenseSchema.virtual('totalOwed').get(function() {
+  return parseFloat(this.splits.reduce((total, split) => total + split.amount, 0).toFixed(2));
+});
+
+// ADD new virtual for outstanding amount:
+expenseSchema.virtual('totalOutstanding').get(function() {
+  const unpaidAmount = this.splits
+    .filter(split => !split.paid)
+    .reduce((total, split) => total + split.amount, 0);
+  return parseFloat(unpaidAmount.toFixed(2));
+});
+
+// UPDATE the existing settlement status virtual:
+expenseSchema.virtual('settlementStatus').get(function() {
+  const totalSplits = this.splits.length;
+  const paidSplits = this.splits.filter(split => split.paid).length;
+  
+  if (paidSplits === 0) return 'unpaid';
+  if (paidSplits === totalSplits) return 'settled';
+  return 'partially_paid';
+});
+
+// ENHANCE getSummary method:
+expenseSchema.methods.getSummary = function() {
+  const totalOwed = this.totalOwed; // Use virtual
+  const totalPaid = this.splits.filter(split => split.paid).reduce((sum, split) => sum + split.amount, 0);
+  const totalOutstanding = this.totalOutstanding; // Use virtual
+  
+  return {
+    totalAmount: this.amount,
+    totalOwed: parseFloat(totalOwed.toFixed(2)),
+    totalPaid: parseFloat(totalPaid.toFixed(2)),
+    totalOutstanding: parseFloat(totalOutstanding.toFixed(2)),
+    splitType: this.splitType,
+    isFullySettled: this.isSettled,
+    settlementStatus: this.settlementStatus,
+    paidMembers: this.splits.filter(split => split.paid).length,
+    totalMembers: this.splits.length,
+    // Add validation check
+    mathCheck: {
+      splitsAddUp: Math.abs(totalOwed - this.amount) < 0.01,
+      settlementCorrect: totalOutstanding === 0 ? this.isSettled : true
+    }
+  };
 };
 
 // Method to get member balance in this expense
@@ -399,11 +492,19 @@ expenseSchema.statics.calculateGroupBalances = async function(groupId) {
   
   return finalBalances;
 };
+
 // Transform output
 expenseSchema.methods.toJSON = function() {
   const obj = this.toObject({ virtuals: true });
   delete obj.__v;
   return obj;
 };
+
+
+
+// Indexes for performance
+expenseSchema.index({ groupId: 1, date: -1 });
+expenseSchema.index({ 'splits.memberId': 1 });
+expenseSchema.index({ isSettled: 1 });
 
 module.exports = mongoose.model('Expense', expenseSchema);

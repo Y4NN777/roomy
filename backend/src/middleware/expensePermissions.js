@@ -94,9 +94,66 @@ const verifyExpenseAdminAccess = async (req, res, next) => {
     logger.error('Expense admin verification error:', error);
     return responseHelper.error(res, 'Failed to verify admin privileges', 500);
   }
+
+};
+
+
+const verifyExpenseSplitAccess = async (req, res, next) => {
+  try {
+    const expenseId = req.params.expenseId;
+    const memberId = req.params.memberId; // The member whose split we're marking as paid
+    const userId = req.user.id;
+
+    if (!expenseId) {
+      return responseHelper.error(res, 'Expense ID is required', 400, 'MISSING_EXPENSE_ID');
+    }
+
+    // Get expense with group info
+    const expense = await Expense.findById(expenseId).populate('groupId');
+    if (!expense) {
+      return responseHelper.notFound(res, 'Expense not found');
+    }
+
+    // Get group with members
+    const group = await Group.findById(expense.groupId._id);
+    if (!group || !group.isActive) {
+      return responseHelper.notFound(res, 'Group not found');
+    }
+
+    // Check if user is a group member
+    const member = group.findMember(userId);
+    if (!member) {
+      return responseHelper.forbidden(res, 'Access denied - not a group member');
+    }
+
+    // Check permissions for marking split as paid:
+    // 1. Admin can mark anyone's split as paid
+    // 2. Expense payer can mark anyone's split as paid  
+    // 3. Any member can mark their own split as paid
+    const isAdmin = member.role === CONSTANTS.USER_ROLES.ADMIN;
+    const isPayer = expense.payerId.toString() === userId;
+    const isMarkingOwnSplit = memberId === userId;
+
+    const canMarkSplitPaid = isAdmin || isPayer || isMarkingOwnSplit;
+
+    if (!canMarkSplitPaid) {
+      return responseHelper.forbidden(res, 'You can only mark your own split as paid');
+    }
+
+    // Attach expense and group to request
+    req.expense = expense;
+    req.group = group;
+    req.userRole = member.role;
+
+    next();
+  } catch (error) {
+    logger.error('Expense or split access verification error:', error);
+    return responseHelper.error(res, 'Failed to verify expense access', 500);
+  }
 };
 
 module.exports = {
   verifyExpenseAccess,
+  verifyExpenseSplitAccess,
   verifyExpenseAdminAccess,
 };

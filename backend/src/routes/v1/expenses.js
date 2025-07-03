@@ -2,7 +2,8 @@ const express = require('express');
 const expenseController = require('../../controllers/v1/expenseController');
 const { authenticateToken } = require('../../middleware/auth');
 const { verifyGroupMembership } = require('../../middleware/groupPermissions');
-const { verifyExpenseAccess, verifyExpenseAdminAccess } = require('../../middleware/expensePermissions');
+const { verifyExpenseAccess, verifyExpenseAdminAccess, verifyExpenseSplitAccess } = require('../../middleware/expensePermissions');
+const { verifyGroupAdmin } = require('../../middleware/groupPermissions');
 const { validate, expenseSchemas } = require('../../middleware/validation');
 
 const router = express.Router();
@@ -92,8 +93,14 @@ router.patch('/:expenseId/splits/reset',
 // Split payment routes
 router.patch('/:expenseId/splits/:memberId/pay', 
   authenticateToken, 
-  verifyExpenseAccess,  // Use expense-based middleware
+  verifyExpenseSplitAccess, // Use expense-based middleware
   expenseController.markSplitPaid
+);
+
+router.post('/group/:groupId/send-reminders', 
+  authenticateToken, 
+  verifyGroupAdmin, 
+  expenseController.sendPaymentReminders
 );
 
 module.exports = router;

@@ -71,7 +71,7 @@ class GroupService {
       if (shouldSendWelcomeEmail) {
         try {
           const admin = group.members.find(member => member.role === 'admin');
-          const notificationService = require('./notificationService');
+          const notificationService = require('./notifications/notificationService');
           
           await notificationService.sendWelcomeToGroup({
             userEmail: user.email,
@@ -198,7 +198,7 @@ class GroupService {
           const currentAdmin = group.members.find(m => m.userId._id.toString() === currentAdminId);
           
           if (newAdmin && currentAdmin) {
-          const notificationService = require('./notificationService');
+          const notificationService = require('./notifications/notificationService');
           await notificationService.sendRoleChangeNotification({
               userEmail: newAdmin.userId.email,
               userName: newAdmin.userId.name,
@@ -384,7 +384,7 @@ async sendEmailInvitation(groupId, recipientEmail, requestingUserId, customMessa
     }
 
     // Send invitation email
-    const notificationService = require('./notificationService');
+    const notificationService = require('./notifications/notificationService');
     const emailResult = await notificationService.sendGroupInvitation({
       recipientEmail,
       inviterName: inviter.userId.name,

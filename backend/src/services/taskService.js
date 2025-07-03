@@ -1,7 +1,7 @@
 const Task = require('../models/Task');
 const Group = require('../models/Group');
 const User = require('../models/User');
-const notificationService = require('./notificationService');
+const notificationService = require('./notifications/notificationService');
 const logger = require('../utils/logger');
 const CONSTANTS = require('../utils/constants');
 

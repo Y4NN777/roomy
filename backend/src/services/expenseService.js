@@ -1,7 +1,7 @@
 const Expense = require('../models/Expense');
 const Group = require('../models/Group');
 const logger = require('../utils/logger');
-const notificationService = require('./notificationService');
+const notificationService = require('./notifications/notificationService');
 
 
 class ExpenseService {

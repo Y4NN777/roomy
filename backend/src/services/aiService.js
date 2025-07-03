@@ -31,58 +31,57 @@ class AIService {
     }
   }
 
-  // Main method: Process voice/text input into tasks
+  /**
+   * Enhanced processVoiceToTasks with event emission
+   */
   async processVoiceToTasks(text, context = {}) {
-    if (!this.isEnabled) {
-      throw new Error('AI service is not available');
-    }
+    const startTime = Date.now();
+    const { userId, groupId } = context;
     
+    // Emit processing started event
+    eventBus.safeEmit(EventTypes.AI_PROCESSING_STARTED, {
+      userId,
+      groupId,
+      inputText: text,
+      timestamp: new Date()
+    });
+
     try {
-      const startTime = Date.now();
+      // ... existing AI processing logic ...
+      const result = await this.performAIProcessing(text, context);
       
-      // Extract member mentions first
-      const memberInfo = this.extractMemberMentions(text, context.groupMembers || []);
+      // Emit processing completed event
+      eventBus.safeEmit(EventTypes.AI_PROCESSING_COMPLETED, {
+        userId,
+        groupId,
+        result,
+        processingTime: Date.now() - startTime,
+        timestamp: new Date()
+      });
       
-      // Build enhanced prompt
-      const prompt = this.buildSmartPrompt(text, context, memberInfo);
+      // Emit tasks suggested event
+      eventBus.safeEmit(EventTypes.AI_TASKS_SUGGESTED, {
+        userId,
+        groupId,
+        suggestedTasks: result.suggestedTasks,
+        confidence: result.confidence,
+        memberMentions: result.memberMentions,
+        timestamp: new Date()
+      });
       
-      console.log('🤖 Processing with AI:', text.substring(0, 100) + '...');
+      return result;
       
-      // Call Gemini AI
-      const result = await this.model.generateContent(prompt);
-      const responseText = result.response.text();
-      
-      // Parse and enhance the response
-      const cleanedResponse = this.cleanJsonResponse(responseText);
-      const parsedResponse = JSON.parse(cleanedResponse);
-      
-      // Post-process assignments to ensure accuracy
-      const enhancedTasks = this.validateAndEnhanceAssignments(
-        parsedResponse.tasks || [], 
-        memberInfo, 
-        context.groupMembers || []
-      );
-      
-      const processingTime = Date.now() - startTime;
-      
-      console.log(`✅ AI generated ${enhancedTasks.length} tasks in ${processingTime}ms`);
-      
-      return {
-        originalText: text,
-        suggestedTasks: enhancedTasks,
-        confidence: parsedResponse.confidence || 0.8,
-        processingTime: processingTime,
-        memberMentions: memberInfo.mentions,
-        metadata: {
-          detectedCategories: parsedResponse.categories || [],
-          assignmentStrategy: parsedResponse.assignmentStrategy || 'automatic',
-          aiModel: 'gemini-2.0-flash-exp',
-          fallbackUsed: false
-        }
-      };
     } catch (error) {
       console.error('❌ AI processing error:', error);
-      // Return intelligent fallback
+      
+      // Emit error event
+      eventBus.safeEmit('ai.processing_failed', {
+        userId,
+        groupId,
+        error: error.message,
+        timestamp: new Date()
+      });
+      
       return this.createFallbackResponse(text, context);
     }
   }

@@ -94,18 +94,32 @@ class ExpenseService {
         throw new Error('Expense not found');
       }
 
-      // Get group for permission checking and split recalculation
+      // Get group ONLY for split recalculation, not permission checking
       const group = await Group.findById(expense.groupId).populate('members.userId');
       if (!group || !group.isActive) {
         throw new Error('Group not found');
       }
 
+      // Store original amount for comparison
+      const originalAmount = expense.amount;
+
       // Update expense
       Object.assign(expense, updateData);
       
       // Recalculate splits if amount changed
-      if (updateData.amount && updateData.amount !== expense.amount) {
-        expense.calculateEqualSplits(group.members);
+      if (updateData.amount && updateData.amount !== originalAmount) {
+        console.log(`💰 Amount changed from ${originalAmount} to ${updateData.amount}, recalculating splits...`);
+        
+        // Preserve existing split ratios when recalculating
+        if (expense.splitType === 'percentage') {
+          // Recalculate based on existing percentages
+          expense.splits.forEach(split => {
+            split.amount = parseFloat(((expense.amount * split.percentage) / 100).toFixed(2));
+          });
+        } else {
+          // Reset to equal splits for equal/custom types
+          expense.calculateEqualSplits(group.members);
+        }
       }
       
       await expense.save();
@@ -124,6 +138,7 @@ class ExpenseService {
       throw error;
     }
   }
+
 
   async deleteExpense(expenseId, requestingUserId) {
     try {
@@ -176,11 +191,6 @@ class ExpenseService {
         throw new Error('Group not found');
       }
 
-      // REMOVE MEMBERSHIP CHECK - middleware already verified
-      // if (!group.isMember(requestingUserId)) {
-      //   throw new Error('Access denied - not a group member');
-      // }
-
       const userRole = group.findMember(requestingUserId).role;
 
       // Check permissions (admin, payer, or the member themselves)
@@ -190,15 +200,76 @@ class ExpenseService {
         throw new Error('Insufficient permissions to mark split as paid');
       }
 
+      // Store original settlement status
+      const wasSettled = expense.isSettled;
+
       // Mark split as paid
       expense.markSplitPaid(memberId, requestingUserId);
       await expense.save();
 
-      // Populate references
+      // Populate references for notifications
       await expense.populate([
         { path: 'payerId', select: 'name email profilePicture' },
-        { path: 'splits.memberId', select: 'name email profilePicture' }
+        { path: 'splits.memberId', select: 'name email profilePicture' },
+        { path: 'groupId', select: 'name' }
       ]);
+
+      // Get the member who just paid
+      const paidMember = expense.splits.find(split => 
+        split.memberId._id.toString() === memberId
+      );
+
+      // Calculate remaining amount
+      const remainingAmount = expense.splits
+        .filter(split => !split.paid)
+        .reduce((sum, split) => sum + split.amount, 0);
+
+      // Send payment notification to the original payer (if different from the one who paid)
+      if (expense.payerId._id.toString() !== memberId) {
+        try {
+          await notificationService.notifySplitPaid({
+            payerEmail: expense.payerId.email,
+            payerName: expense.payerId.name,
+            memberName: paidMember.memberId.name,
+            amount: paidMember.amount,
+            description: expense.description,
+            groupName: expense.groupId.name,
+            expenseTotal: expense.amount,
+            remainingAmount: remainingAmount.toFixed(2),
+            isFullySettled: expense.isSettled
+          });
+        } catch (notificationError) {
+          logger.warn('❌ Split payment notification failed:', notificationError);
+        }
+      }
+
+      // If expense just became fully settled, notify all group members
+      if (!wasSettled && expense.isSettled) {
+        try {
+          // Get all group members for the celebration notification
+          const groupWithMembers = await Group.findById(expense.groupId)
+            .populate('members.userId', 'name email');
+
+          const allMemberDetails = expense.splits.map(split => ({
+            name: split.memberId.name,
+            amount: split.amount.toFixed(2),
+            isPayer: split.memberId._id.toString() === expense.payerId._id.toString()
+          }));
+
+          await notificationService.notifyExpenseFullySettled({
+            groupMembers: groupWithMembers.members.map(member => ({
+              email: member.userId.email,
+              name: member.userId.name
+            })),
+            description: expense.description,
+            groupName: expense.groupId.name,
+            totalAmount: expense.amount.toFixed(2),
+            allMemberDetails
+          });
+        } catch (notificationError) {
+          logger.warn('❌ Expense settlement notification failed:', notificationError);
+        }
+      }
 
       logger.info(`Split marked as paid for expense ${expenseId} by user ${requestingUserId}`);
       return expense.toJSON();
@@ -208,49 +279,62 @@ class ExpenseService {
     }
   }
 
-  async getGroupBalances(groupId, requestingUserId) {
-  try {
-    // Use the FIXED balance calculation
-    const balances = await Expense.calculateGroupBalances(groupId);
-    
-    // Add status indicators based on CURRENT debt, not historical
-    const balancesWithStatus = balances.map(balance => ({
-      ...balance,
-      status: balance.netBalance > 0 ? 'owed' : 
-              balance.netBalance < 0 ? 'owes' : 'settled',
-      formattedBalance: Math.abs(balance.netBalance).toFixed(2),
-      formattedOwed: balance.totalOwed.toFixed(2),
-      formattedPaid: balance.totalPaid.toFixed(2)
-    }));
+  // Add this new method for sending payment reminders:
+  async sendPaymentReminders(groupId, requestingUserId, daysThreshold = 3) {
+    try {
 
-    // Calculate summary
-    const totalGroupExpenses = balances.reduce((sum, balance) => sum + balance.totalPaid, 0);
-    const totalCurrentDebt = balances.reduce((sum, balance) => sum + balance.totalOwed, 0);
-    const averagePerMember = balances.length > 0 ? totalGroupExpenses / balances.length : 0;
+      const result = await notificationService.sendBulkPaymentReminders(groupId, daysThreshold);
 
-    return {
-      balances: balancesWithStatus,
-      summary: {
-        totalGroupExpenses: totalGroupExpenses.toFixed(2),
-        totalCurrentDebt: totalCurrentDebt.toFixed(2),
-        averagePerMember: averagePerMember.toFixed(2),
-        memberCount: balances.length,
-        hasOutstandingBalances: balancesWithStatus.some(b => b.status !== 'settled')
-      }
-    };
-  } catch (error) {
-    logger.error('Get group balances error:', error);
-    throw error;
+      return {
+        success: result.success,
+        remindersSent: result.reminders ? result.reminders.length : 0,
+        unpaidExpenses: result.totalExpenses || 0,
+        details: result.reminders || []
+      };
+    } catch (error) {
+      logger.error('Send payment reminders error:', error);
+      throw error;
+    }
   }
-}
+
+  async getGroupBalances(groupId, requestingUserId) {
+    try {
+      // Use the FIXED balance calculation
+      const balances = await Expense.calculateGroupBalances(groupId);
+      
+      // Add status indicators based on CURRENT debt, not historical
+      const balancesWithStatus = balances.map(balance => ({
+        ...balance,
+        status: balance.netBalance > 0 ? 'owed' : 
+                balance.netBalance < 0 ? 'owes' : 'settled',
+        formattedBalance: Math.abs(balance.netBalance).toFixed(2),
+        formattedOwed: balance.totalOwed.toFixed(2),
+        formattedPaid: balance.totalPaid.toFixed(2)
+      }));
+
+      // Calculate summary
+      const totalGroupExpenses = balances.reduce((sum, balance) => sum + balance.totalPaid, 0);
+      const totalCurrentDebt = balances.reduce((sum, balance) => sum + balance.totalOwed, 0);
+      const averagePerMember = balances.length > 0 ? totalGroupExpenses / balances.length : 0;
+
+      return {
+        balances: balancesWithStatus,
+        summary: {
+          totalGroupExpenses: totalGroupExpenses.toFixed(2),
+          totalCurrentDebt: totalCurrentDebt.toFixed(2),
+          averagePerMember: averagePerMember.toFixed(2),
+          memberCount: balances.length,
+          hasOutstandingBalances: balancesWithStatus.some(b => b.status !== 'settled')
+        }
+      };
+    } catch (error) {
+      logger.error('Get group balances error:', error);
+      throw error;
+    }
+  }
 
   async getExpenseStatistics(groupId, requestingUserId, period = 'month') {
     try {
-      // REMOVE MEMBERSHIP CHECK - middleware already verified
-      // const group = await Group.findById(groupId);
-      // if (!group || !group.isMember(requestingUserId)) {
-      //   throw new Error('Access denied - not a group member');
-      // }
 
       // Calculate date range based on period
       const endDate = new Date();
@@ -588,7 +672,7 @@ async resetToEqualSplits(expenseId, requestingUserId) {
 
       // Send notifications
       try {
-        const notificationService = require('./notificationService');
+        
         await notificationService.notifyNewExpense({
           expense,
           groupName: group.name,

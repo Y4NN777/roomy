@@ -1,6 +1,7 @@
 const emailConfig = require('../config/email');
 const emailTemplates = require('../utils/emailTemplates');
 const logger = require('../utils/logger');
+const User = require('../models/User');
 
 class NotificationService {
   constructor() {
@@ -463,6 +464,348 @@ class NotificationService {
     }
     
     return results;
+  }
+
+
+  async notifyNewExpense(data) {
+    const { expense, groupName, payerName } = data;
+    
+    if (!this.emailEnabled) {
+      logger.warn('📧 Email not configured, skipping new expense notification');
+      return { success: false, reason: 'Email not configured' };
+    }
+
+    try {
+      // Prepare split data for email
+      const splits = expense.splits.map(split => ({
+        memberName: split.memberId.name,
+        amount: split.amount.toFixed(2),
+        percentage: split.percentage || (split.amount / expense.amount * 100).toFixed(1)
+      }));
+
+      const template = emailTemplates.expenseCreated({
+        payerName,
+        amount: expense.amount.toFixed(2),
+        description: expense.description,
+        groupName,
+        splits
+      });
+
+      // Send to all group members except the payer
+      const notifications = [];
+      for (const split of expense.splits) {
+        if (split.memberId._id.toString() !== expense.payerId._id.toString()) {
+          const result = await this.sendEmail(
+            split.memberId.email,
+            template.subject,
+            template.html,
+            template.text
+          );
+          notifications.push({
+            recipient: split.memberId.email,
+            result
+          });
+        }
+      }
+
+      logger.info(`✅ New expense notifications sent for: ${expense.description}`);
+      return { success: true, notifications };
+    } catch (error) {
+      logger.error('❌ Send new expense notification error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  async notifyExpenseSplitChanged(data) {
+    const { expense, updatedBy, groupName } = data;
+    
+    if (!this.emailEnabled) {
+      logger.warn('📧 Email not configured, skipping split change notification');
+      return { success: false, reason: 'Email not configured' };
+    }
+
+    try {
+      // Get updater name
+      const updater = await User.findById(updatedBy).select('name');
+      const updaterName = updater ? updater.name : 'Group Admin';
+
+      // Prepare new split data
+      const newSplits = expense.splits.map(split => ({
+        memberName: split.memberId.name,
+        amount: split.amount.toFixed(2),
+        percentage: split.percentage || (split.amount / expense.amount * 100).toFixed(1)
+      }));
+
+      const template = emailTemplates.expenseSplitChanged({
+        description: expense.description,
+        updatedBy: updaterName,
+        groupName,
+        newSplits
+      });
+
+      // Send to all group members
+      const notifications = [];
+      for (const split of expense.splits) {
+        const result = await this.sendEmail(
+          split.memberId.email,
+          template.subject,
+          template.html,
+          template.text
+        );
+        notifications.push({
+          recipient: split.memberId.email,
+          result
+        });
+      }
+
+      logger.info(`✅ Split change notifications sent for: ${expense.description}`);
+      return { success: true, notifications };
+    } catch (error) {
+      logger.error('❌ Send split change notification error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  async notifySplitPaid(data) {
+    const { payerEmail, payerName, memberName, amount, description, groupName, expenseTotal, remainingAmount, isFullySettled } = data;
+    
+    if (!this.emailEnabled) {
+      logger.warn('📧 Email not configured, skipping split payment notification');
+      return { success: false, reason: 'Email not configured' };
+    }
+
+    try {
+      const template = emailTemplates.splitPaid({
+        payerName,
+        memberName,
+        amount,
+        description,
+        groupName,
+        expenseTotal,
+        remainingAmount,
+        isFullySettled
+      });
+
+      const result = await this.sendEmail(
+        payerEmail,
+        template.subject,
+        template.html,
+        template.text
+      );
+
+      if (result.success) {
+        logger.info(`✅ Split payment notification sent to ${payerEmail}`);
+      }
+
+      return result;
+    } catch (error) {
+      logger.error('❌ Send split payment notification error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  async notifyExpenseFullySettled(data) {
+    const { groupMembers, description, groupName, totalAmount, allMemberDetails } = data;
+    
+    if (!this.emailEnabled) {
+      logger.warn('📧 Email not configured, skipping expense settlement notification');
+      return { success: false, reason: 'Email not configured' };
+    }
+
+    try {
+      const template = emailTemplates.expenseFullySettled({
+        description,
+        groupName,
+        totalAmount,
+        allMembers: allMemberDetails
+      });
+
+      // Send to all group members
+      const notifications = [];
+      for (const member of groupMembers) {
+        try {
+          const result = await this.sendEmail(
+            member.email,
+            template.subject,
+            template.html,
+            template.text
+          );
+          notifications.push({ 
+            email: member.email, 
+            success: result.success,
+            messageId: result.messageId 
+          });
+        } catch (error) {
+          logger.error(`Failed to send settlement notification to ${member.email}:`, error);
+          notifications.push({ 
+            email: member.email, 
+            success: false, 
+            error: error.message 
+          });
+        }
+      }
+
+      logger.info(`✅ Expense settlement notifications sent to ${groupMembers.length} members`);
+      return { success: true, notifications };
+    } catch (error) {
+      logger.error('❌ Send expense settlement notifications error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  async sendPaymentReminder(data) {
+    const { memberEmail, memberName, amount, description, groupName, daysSinceExpense, payerName } = data;
+    
+    if (!this.emailEnabled) {
+      logger.warn('📧 Email not configured, skipping payment reminder');
+      return { success: false, reason: 'Email not configured' };
+    }
+
+    try {
+      const template = emailTemplates.paymentReminder({
+        memberName,
+        amount,
+        description,
+        groupName,
+        daysSinceExpense,
+        payerName
+      });
+
+      const result = await this.sendEmail(
+        memberEmail,
+        template.subject,
+        template.html,
+        template.text
+      );
+
+      if (result.success) {
+        logger.info(`✅ Payment reminder sent to ${memberEmail}`);
+      }
+
+      return result;
+    } catch (error) {
+      logger.error('❌ Send payment reminder error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  async notifyNewExpense(data) {
+    const { expense, groupName, payerName } = data;
+    
+    if (!this.emailEnabled) {
+      logger.warn('📧 Email not configured, skipping new expense notification');
+      return { success: false, reason: 'Email not configured' };
+    }
+
+    try {
+      // Notify all group members except the payer
+      const notifications = [];
+      for (const split of expense.splits) {
+        // Skip the payer (they already know they paid)
+        if (split.memberId._id.toString() === expense.payerId._id.toString()) {
+          continue;
+        }
+
+        const template = emailTemplates.expenseCreated({
+          payerName,
+          amount: expense.amount,
+          description: expense.description,
+          groupName,
+          memberShare: split.amount,
+          memberName: split.memberId.name
+        });
+
+        try {
+          const result = await this.sendEmail(
+            split.memberId.email,
+            template.subject,
+            template.html.replace('${split.amount}', split.amount).replace('${split.memberName}', split.memberId.name),
+            template.text
+          );
+          
+          notifications.push({ 
+            email: split.memberId.email, 
+            success: result.success,
+            messageId: result.messageId 
+          });
+        } catch (error) {
+          logger.error(`Failed to send expense notification to ${split.memberId.email}:`, error);
+          notifications.push({ 
+            email: split.memberId.email, 
+            success: false, 
+            error: error.message 
+          });
+        }
+      }
+
+      logger.info(`✅ New expense notifications sent to ${notifications.length} members`);
+      return { success: true, notifications };
+    } catch (error) {
+      logger.error('❌ Send new expense notifications error:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  async sendBulkPaymentReminders(groupId, daysThreshold = 3) {
+    try {
+      const Expense = require('../models/Expense');
+      const Group = require('../models/Group');
+      
+      // Find group with members
+      const group = await Group.findById(groupId).populate('members.userId', 'name email');
+      if (!group) {
+        throw new Error('Group not found');
+      }
+
+      // Find unpaid expenses older than threshold
+      const thresholdDate = new Date();
+      thresholdDate.setDate(thresholdDate.getDate() - daysThreshold);
+
+      const unpaidExpenses = await Expense.find({
+        groupId,
+        isSettled: false,
+        date: { $lte: thresholdDate }
+      }).populate('payerId', 'name email')
+        .populate('splits.memberId', 'name email');
+
+      const reminders = [];
+      
+      for (const expense of unpaidExpenses) {
+        const daysSinceExpense = Math.floor((new Date() - expense.date) / (1000 * 60 * 60 * 24));
+        
+        // Send reminders to unpaid members
+        for (const split of expense.splits) {
+          if (!split.paid) {
+            try {
+              const result = await this.sendPaymentReminder({
+                memberEmail: split.memberId.email,
+                memberName: split.memberId.name,
+                amount: split.amount,
+                description: expense.description,
+                groupName: group.name,
+                daysSinceExpense,
+                payerName: expense.payerId.name
+              });
+              
+              reminders.push({
+                expenseId: expense._id,
+                memberId: split.memberId._id,
+                memberEmail: split.memberId.email,
+                success: result.success
+              });
+            } catch (error) {
+              logger.error(`Failed to send reminder to ${split.memberId.email}:`, error);
+            }
+          }
+        }
+      }
+
+      logger.info(`✅ Sent ${reminders.length} payment reminders for group ${groupId}`);
+      return { success: true, reminders, totalExpenses: unpaidExpenses.length };
+    } catch (error) {
+      logger.error('❌ Send bulk payment reminders error:', error);
+      return { success: false, error: error.message };
+    }
   }
 }
 

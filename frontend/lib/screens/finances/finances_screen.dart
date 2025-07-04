@@ -468,5 +468,38 @@ Widget _buildExpenseCard(String title, String amount, String paidBy, String date
   }
 
 
+   Widget _buildParticipantChip(String name) {
+    Color backgroundColor;
+    Color textColor;
+    
+    if (name == 'John Doe') {
+      backgroundColor = AppColors.primaryBlue.withOpacity(0.1);
+      textColor = AppColors.primaryBlue;
+    } else if (name == 'Sarah Johnson') {
+      backgroundColor = Colors.green.withOpacity(0.1);
+      textColor = Colors.green[700]!;
+    } else {
+      backgroundColor = Colors.purple.withOpacity(0.1);
+      textColor = Colors.purple[700]!;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        name,
+        style: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+          color: textColor,
+        ),
+      ),
+    );
+  }
+
+
 
 }

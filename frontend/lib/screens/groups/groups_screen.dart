@@ -1,17 +1,15 @@
 import 'package:flutter/material.dart';
 
-class GroupsPage extends StatelessWidget {
+class GroupsPage extends StatefulWidget {
   const GroupsPage({Key? key}) : super(key: key);
 
   @override
+  State<GroupsPage> createState() => _GroupsPageState();
+}
+
+class _GroupsPageState extends State<GroupsPage> {
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Groups'),
-      ),
-      body: const Center(
-        child: Text('Groups Screen - To be implemented'),
-      ),
-    );
+    return Scaffold();
   }
 }

@@ -42,6 +42,26 @@ class _GroupsPageState extends State<GroupsPage> with TickerProviderStateMixin {
     super.dispose();
   }
 
+   void _handleNavigation(int index) {
+    setState(() {
+      _currentIndex = index;
+    });
+    switch (index) {
+      case 0:
+        Navigator.pushReplacementNamed(context, '/home');
+        break;
+      case 1:
+        Navigator.pushReplacementNamed(context, '/task');
+        break;
+      case 2:
+        // Groups - current page
+        break;
+      case 3:
+        Navigator.pushReplacementNamed(context, '/finances');
+        break;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold();

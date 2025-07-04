@@ -51,4 +51,26 @@ class _FinancesPageState extends State<FinancesPage> with TickerProviderStateMix
     _pulseController.dispose();
     super.dispose();
   }
+
+   void _handleNavigation(int index) {
+    setState(() {
+      _currentIndex = index;
+    });
+    switch (index) {
+      case 0:
+        Navigator.pushReplacementNamed(context, '/home');
+        break;
+      case 1:
+        Navigator.pushReplacementNamed(context, '/task');
+        break;
+      case 2:
+        Navigator.pushReplacementNamed(context, '/groups');
+        break;
+      case 3:
+        // Finances - current page
+        break;
+    }
+  }
+
+
 }

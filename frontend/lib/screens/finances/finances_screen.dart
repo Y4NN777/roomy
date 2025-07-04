@@ -1,17 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import '../../core/app_colors.dart';
 
-class FinancesPage extends StatelessWidget {
+class FinancesPage extends StatefulWidget {
   const FinancesPage({Key? key}) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Finances'),
-      ),
-      body: const Center(
-        child: Text('Finances Screen - To be implemented'),
-      ),
-    );
-  }
+  State<FinancesPage> createState() => _FinancesPageState();
+}
+
+class _FinancesPageState extends State<FinancesPage> with TickerProviderStateMixin {
+  
 }

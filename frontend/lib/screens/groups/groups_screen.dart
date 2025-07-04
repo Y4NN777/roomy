@@ -351,6 +351,42 @@ class _GroupsPageState extends State<GroupsPage> with TickerProviderStateMixin {
     );
   }
 
+  Widget _buildMembersList() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Column(
+        children: [
+          _buildMemberCard(
+            'John Doe',
+            '(You)',
+            'john.doe@email.com',
+            'JD',
+            'Admin',
+            isCurrentUser: true,
+          ),
+          const SizedBox(height: 16),
+          _buildMemberCard(
+            'Sarah Johnson',
+            '',
+            'sarah.j@email.com',
+            'SJ',
+            'Member',
+            showActions: true,
+          ),
+          const SizedBox(height: 16),
+          _buildMemberCard(
+            'Mike Chen',
+            '',
+            'mike.chen@email.com',
+            'MC',
+            'Member',
+            showActions: true,
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold();

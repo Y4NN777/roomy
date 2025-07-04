@@ -341,5 +341,31 @@ class _FinancesPageState extends State<FinancesPage> with TickerProviderStateMix
   }
 
 
+    Widget _buildBalanceItem(String name, String amount, {bool isPositive = false, bool isCurrentUser = false}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          name,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: Colors.grey[900],
+          ),
+        ),
+        Text(
+          amount,
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            color: isPositive ? Colors.green[600] : Colors.red[600],
+          ),
+        ),
+      ],
+    );
+  }
+
+
+
 
 }

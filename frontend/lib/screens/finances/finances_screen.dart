@@ -365,6 +365,35 @@ class _FinancesPageState extends State<FinancesPage> with TickerProviderStateMix
     );
   }
 
+Widget _buildExpensesList() {
+    return Column(
+      children: [
+        _buildExpenseCard(
+          'Groceries',
+          '45.67',
+          'Mike Chen',
+          '6/28/2025',
+          ['John Doe', 'Sarah Johnson', 'Mike Chen'],
+        ),
+        const SizedBox(height: 16),
+        _buildExpenseCard(
+          'Internet Bill',
+          '89.99',
+          'John Doe',
+          '6/27/2025',
+          ['John Doe', 'Sarah Johnson', 'Mike Chen'],
+        ),
+        const SizedBox(height: 16),
+        _buildExpenseCard(
+          'Cleaning Supplies',
+          '23.45',
+          'Sarah Johnson',
+          '6/26/2025',
+          ['John Doe', 'Sarah Johnson'],
+        ),
+      ],
+    );
+  }
 
 
 

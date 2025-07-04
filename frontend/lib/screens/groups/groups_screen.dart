@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import '../../core/app_colors.dart';
 
 class GroupsPage extends StatefulWidget {
   const GroupsPage({Key? key}) : super(key: key);
@@ -8,7 +10,7 @@ class GroupsPage extends StatefulWidget {
 }
 
 class _GroupsPageState extends State<GroupsPage> with TickerProviderStateMixin {
-  int _currentIndex = 2;
+  int _currentIndex = 2; // Groups tab is selected
   late AnimationController _fadeController;
   late AnimationController _pulseController;
   late Animation<double> _fadeAnimation;
@@ -25,12 +27,20 @@ class _GroupsPageState extends State<GroupsPage> with TickerProviderStateMixin {
       duration: const Duration(milliseconds: 2000),
       vsync: this,
     );
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _fadeController, curve: Curves.easeInOut),
-    );
-    _pulseAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
-    );
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _fadeController,
+      curve: Curves.easeInOut,
+    ));
+    _pulseAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _pulseController,
+      curve: Curves.easeInOut,
+    ));
     _fadeController.forward();
     _pulseController.repeat(reverse: true);
   }
@@ -42,7 +52,7 @@ class _GroupsPageState extends State<GroupsPage> with TickerProviderStateMixin {
     super.dispose();
   }
 
-   void _handleNavigation(int index) {
+  void _handleNavigation(int index) {
     setState(() {
       _currentIndex = index;
     });
@@ -62,7 +72,7 @@ class _GroupsPageState extends State<GroupsPage> with TickerProviderStateMixin {
     }
   }
 
-   Widget _buildTopBar() {
+  Widget _buildTopBar() {
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -287,7 +297,7 @@ class _GroupsPageState extends State<GroupsPage> with TickerProviderStateMixin {
     );
   }
 
-   Widget _buildGroupInfoCard() {
+  Widget _buildGroupInfoCard() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
       child: Container(
@@ -387,8 +397,7 @@ class _GroupsPageState extends State<GroupsPage> with TickerProviderStateMixin {
     );
   }
 
-
-   Widget _buildMemberCard(
+  Widget _buildMemberCard(
     String name,
     String suffix,
     String email,
@@ -512,7 +521,7 @@ class _GroupsPageState extends State<GroupsPage> with TickerProviderStateMixin {
     );
   }
 
-   Widget _buildActionButton(String text, Color color) {
+  Widget _buildActionButton(String text, Color color) {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(8),
@@ -590,8 +599,6 @@ class _GroupsPageState extends State<GroupsPage> with TickerProviderStateMixin {
       ),
     );
   }
-
-
 
   @override
   Widget build(BuildContext context) {

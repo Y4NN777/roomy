@@ -118,6 +118,8 @@ class _HomePageState extends State<HomePage>
         ),
       ),
       bottomNavigationBar: BottomNavigation(
+        primaryBlue: AppColors.primaryBlue,
+        white: AppColors.white,
         currentIndex: _currentIndex,
         onTap: (index) {
           setState(() {

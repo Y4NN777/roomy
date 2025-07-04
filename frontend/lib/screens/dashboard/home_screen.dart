@@ -69,9 +69,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       case 3:
         Navigator.pushNamed(context, '/finances');
         break;
-      case 4:
-        Navigator.pushNamed(context, '/settings');
-        break;
     }
   }
 
@@ -268,17 +265,17 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   Widget _buildInfoCards() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
         children: [
           Expanded(
             child: _infoCard('3', 'Pending\nTasks', AppColors.primaryBlue, Icons.task_alt_outlined),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 12),
           Expanded(
             child: _infoCard('159', 'Total\nExpenses', AppColors.primaryOrange, Icons.account_balance_wallet_outlined),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 12),
           Expanded(
             child: _infoCard('3', 'Group\nMembers', AppColors.primaryBlue, Icons.group_outlined),
           ),
@@ -292,46 +289,46 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       height: 140,
       decoration: BoxDecoration(
         color: bgColor,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
             color: bgColor.withOpacity(0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
               color: AppColors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
               icon,
               color: AppColors.white,
-              size: 20,
+              size: 18,
             ),
           ),
           const Spacer(),
           Text(
             number,
             style: const TextStyle(
-              fontSize: 32,
+              fontSize: 28,
               fontWeight: FontWeight.w800,
               color: AppColors.white,
               letterSpacing: -0.5,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 2),
           Text(
             label,
             style: const TextStyle(
-              fontSize: 14,
+              fontSize: 12,
               color: AppColors.white,
               fontWeight: FontWeight.w600,
               height: 1.2,
@@ -582,11 +579,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             icon: Icon(Icons.attach_money_outlined),
             activeIcon: Icon(Icons.attach_money),
             label: 'Finances',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings_outlined),
-            activeIcon: Icon(Icons.settings),
-            label: 'Settings',
           ),
         ],
       ),

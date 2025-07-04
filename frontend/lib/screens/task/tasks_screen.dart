@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
+import '../../core/app_colors.dart';
+import '../../models/task.dart';
+
 class TasksPage extends StatefulWidget {
   const TasksPage({Key? key}) : super(key: key);
 
@@ -10,18 +13,13 @@ class TasksPage extends StatefulWidget {
 }
 
 class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
-  // Consistent color scheme
-  static const Color primaryOrange = Color(0xFFF97316);
-  static const Color primaryBlue = Color(0xFF03339C);
-  static const Color white = Color(0xFFFFFFFF);
-  
   int _currentIndex = 1; // Tasks is active in bottom nav
   int _selectedTab = 0; // 0 = All, 1 = Pending, 2 = Completed
   bool _showAddTask = false;
-  
+
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
-  
+
   final List<Task> _tasks = [
     Task(
       title: "Take out trash",
@@ -60,7 +58,7 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    
+
     _fadeController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
@@ -86,7 +84,7 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: AppColors.background,
       body: Stack(
         children: [
           FadeTransition(
@@ -95,7 +93,7 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
               children: [
                 // Header Section - Matches HomePage style
                 _buildHeader(),
-                
+
                 // Main Content
                 Expanded(
                   child: SingleChildScrollView(
@@ -107,9 +105,9 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
                         children: [
                           // Task Tabs - Animated like HomePage stats
                           _buildTaskTabs(),
-                          
+
                           const SizedBox(height: 24),
-                          
+
                           // Task List - Animated like HomePage recent activity
                           _buildTaskList(),
                         ],
@@ -123,14 +121,14 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
           if (_showAddTask) _buildAddTaskModal(),
         ],
       ),
-      
+
       // Bottom Navigation - Matches HomePage exactly
       bottomNavigationBar: _buildBottomNavigation(),
-      
+
       // Add Task Button
       floatingActionButton: FloatingActionButton(
-        backgroundColor: primaryOrange,
-        child: const Icon(Icons.add, color: white),
+        backgroundColor: AppColors.primaryOrange,
+        child: const Icon(Icons.add, color: AppColors.white),
         onPressed: () => setState(() => _showAddTask = true),
       ),
     );
@@ -138,9 +136,9 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
 
   Widget _buildHeader() {
     return Container(
-      decoration: const BoxDecoration(
-        color: primaryBlue,
-        borderRadius: BorderRadius.only(
+      decoration: BoxDecoration(
+        color: AppColors.primaryBlue,
+        borderRadius: const BorderRadius.only(
           bottomLeft: Radius.circular(20),
           bottomRight: Radius.circular(20),
         ),
@@ -155,7 +153,7 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
               Row(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.arrow_back, color: white),
+                    icon: const Icon(Icons.arrow_back, color: AppColors.white),
                     onPressed: () => Navigator.pop(context),
                   ),
                   const SizedBox(width: 12),
@@ -164,12 +162,12 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
-                      color: white,
+                      color: AppColors.white,
                     ),
                   ),
                 ],
               ),
-              
+
               // Right side - Matches HomePage
               Row(
                 children: [
@@ -180,7 +178,7 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
                         padding: const EdgeInsets.all(8),
                         child: const Icon(
                           Icons.notifications_outlined,
-                          color: white,
+                          color: AppColors.white,
                           size: 24,
                         ),
                       ),
@@ -190,15 +188,15 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
                         child: Container(
                           width: 18,
                           height: 18,
-                          decoration: const BoxDecoration(
-                            color: primaryOrange,
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryOrange,
                             shape: BoxShape.circle,
                           ),
                           child: const Center(
                             child: Text(
                               '3',
                               style: TextStyle(
-                                color: white,
+                                color: AppColors.white,
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -208,18 +206,18 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
                       ),
                     ],
                   ),
-                  
+
                   const SizedBox(width: 12),
-                  
+
                   // User Avatar - Matches HomePage
                   Container(
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: primaryOrange,
+                      color: AppColors.primaryOrange,
                       border: Border.all(
-                        color: white.withOpacity(0.3),
+                        color: AppColors.white.withOpacity(0.3),
                         width: 2,
                       ),
                     ),
@@ -227,7 +225,7 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
                       child: Text(
                         'R',
                         style: TextStyle(
-                          color: white,
+                          color: AppColors.white,
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
                         ),
@@ -253,7 +251,7 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
           scale: value,
           child: Container(
             decoration: BoxDecoration(
-              color: white.withOpacity(0.2),
+              color: AppColors.white.withOpacity(0.2),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
@@ -264,7 +262,7 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       decoration: BoxDecoration(
-                        color: _selectedTab == 0 ? white : Colors.transparent,
+                        color: _selectedTab == 0 ? AppColors.white : Colors.transparent,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Center(
@@ -272,7 +270,7 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
                           'All',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
-                            color: _selectedTab == 0 ? primaryBlue : white,
+                            color: _selectedTab == 0 ? AppColors.primaryBlue : AppColors.white,
                           ),
                         ),
                       ),
@@ -285,7 +283,7 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       decoration: BoxDecoration(
-                        color: _selectedTab == 1 ? white : Colors.transparent,
+                        color: _selectedTab == 1 ? AppColors.white : Colors.transparent,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Center(
@@ -293,7 +291,7 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
                           'Pending',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
-                            color: _selectedTab == 1 ? primaryBlue : white,
+                            color: _selectedTab == 1 ? AppColors.primaryBlue : AppColors.white,
                           ),
                         ),
                       ),
@@ -306,7 +304,7 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       decoration: BoxDecoration(
-                        color: _selectedTab == 2 ? white : Colors.transparent,
+                        color: _selectedTab == 2 ? AppColors.white : Colors.transparent,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Center(
@@ -314,7 +312,7 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
                           'Completed',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
-                            color: _selectedTab == 2 ? primaryBlue : white,
+                            color: _selectedTab == 2 ? AppColors.primaryBlue : AppColors.white,
                           ),
                         ),
                       ),
@@ -365,7 +363,7 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
     Color priorityColor;
     switch (task.priority) {
       case Priority.high:
-        priorityColor = primaryOrange;
+        priorityColor = AppColors.primaryOrange;
         break;
       case Priority.medium:
         priorityColor = Colors.amber;
@@ -387,11 +385,11 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
             child: Container(
               margin: const EdgeInsets.only(bottom: 12),
               decoration: BoxDecoration(
-                color: white,
+                color: AppColors.white,
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: primaryBlue.withOpacity(0.08),
+                    color: AppColors.primaryBlue.withOpacity(0.08),
                     blurRadius: 20,
                     offset: const Offset(0, 10),
                   ),
@@ -411,7 +409,7 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              color: primaryBlue,
+                              color: AppColors.primaryBlue,
                               decoration: task.completed 
                                   ? TextDecoration.lineThrough 
                                   : TextDecoration.none,
@@ -507,14 +505,14 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
                               },
                               style: OutlinedButton.styleFrom(
                                 padding: const EdgeInsets.symmetric(vertical: 12),
-                                side: BorderSide(color: primaryBlue),
+                                side: BorderSide(color: AppColors.primaryBlue),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                               ),
                               child: const Text(
                                 'Mark Complete',
-                                style: TextStyle(color: primaryBlue),
+                                style: TextStyle(color: AppColors.primaryBlue),
                               ),
                             ),
                           ),
@@ -549,11 +547,11 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
               margin: const EdgeInsets.all(20),
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: white,
+                color: AppColors.white,
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: primaryBlue.withOpacity(0.1),
+                    color: AppColors.primaryBlue.withOpacity(0.1),
                     blurRadius: 20,
                     offset: const Offset(0, 10),
                   ),
@@ -568,7 +566,7 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
-                      color: primaryBlue,
+                      color: AppColors.primaryBlue,
                     ),
                   ),
                   
@@ -579,7 +577,7 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
-                      color: primaryBlue,
+                      color: AppColors.primaryBlue,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -602,7 +600,7 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
-                      color: primaryBlue,
+                      color: AppColors.primaryBlue,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -631,7 +629,7 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
-                              color: primaryBlue,
+                              color: AppColors.primaryBlue,
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -660,7 +658,7 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
-                              color: primaryBlue,
+                              color: AppColors.primaryBlue,
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -689,7 +687,7 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
-                              color: primaryBlue,
+                              color: AppColors.primaryBlue,
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -719,14 +717,14 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
                           onPressed: () => setState(() => _showAddTask = false),
                           style: OutlinedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 16),
-                            side: BorderSide(color: primaryBlue),
+                            side: BorderSide(color: AppColors.primaryBlue),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
                             ),
                           ),
                           child: const Text(
                             'Cancel',
-                            style: TextStyle(color: primaryBlue),
+                            style: TextStyle(color: AppColors.primaryBlue),
                           ),
                         ),
                       ),
@@ -741,7 +739,7 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
                             setState(() => _showAddTask = false);
                           },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: primaryOrange,
+                            backgroundColor: AppColors.primaryOrange,
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
@@ -749,7 +747,7 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
                           ),
                           child: const Text(
                             'Save Task',
-                            style: TextStyle(color: white),
+                            style: TextStyle(color: AppColors.white),
                           ),
                         ),
                       ),
@@ -767,10 +765,10 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
   Widget _buildBottomNavigation() {
     return Container(
       decoration: BoxDecoration(
-        color: white,
+        color: AppColors.white,
         boxShadow: [
           BoxShadow(
-            color: primaryBlue.withOpacity(0.1),
+            color: AppColors.primaryBlue.withOpacity(0.1),
             blurRadius: 20,
             offset: const Offset(0, -5),
           ),
@@ -830,7 +828,7 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
         setState(() {
           _currentIndex = index;
         });
-        
+
         // Handle navigation to different pages
         _handleNavigation(index);
       },
@@ -842,12 +840,12 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: isSelected ? primaryBlue.withOpacity(0.1) : Colors.transparent,
+                color: isSelected ? AppColors.primaryBlue.withOpacity(0.1) : Colors.transparent,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
                 isSelected ? selectedIcon : icon,
-                color: isSelected ? primaryBlue : primaryBlue.withOpacity(0.4),
+                color: isSelected ? AppColors.primaryBlue : AppColors.primaryBlue.withOpacity(0.4),
                 size: 24,
               ),
             ),
@@ -857,7 +855,7 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
-                color: isSelected ? primaryBlue : primaryBlue.withOpacity(0.4),
+                color: isSelected ? AppColors.primaryBlue : AppColors.primaryBlue.withOpacity(0.4),
               ),
             ),
           ],
@@ -883,24 +881,4 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
         break;
     }
   }
-}
-
-enum Priority { high, medium, low }
-
-class Task {
-  String title;
-  String description;
-  Priority priority;
-  String assignedTo;
-  DateTime dueDate;
-  bool completed;
-
-  Task({
-    required this.title,
-    required this.description,
-    required this.priority,
-    required this.assignedTo,
-    required this.dueDate,
-    required this.completed,
-  });
 }

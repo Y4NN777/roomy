@@ -9,12 +9,13 @@ class FinancesPage extends StatefulWidget {
   State<FinancesPage> createState() => _FinancesPageState();
 }
 
-class _FinancesPageState extends State<FinancesPage> with TickerProviderStateMixin {
+class _FinancesPageState extends State<FinancesPage>
+    with TickerProviderStateMixin {
   int _currentIndex = 3; // Finances tab is selected
   late AnimationController _fadeController;
   late AnimationController _pulseController;
   late Animation<double> _fadeAnimation;
-  late Animation<double> _pulseAnimation; 
+  late Animation<double> _pulseAnimation;
 
   @override
   void initState() {
@@ -52,7 +53,7 @@ class _FinancesPageState extends State<FinancesPage> with TickerProviderStateMix
     super.dispose();
   }
 
-   void _handleNavigation(int index) {
+  void _handleNavigation(int index) {
     setState(() {
       _currentIndex = index;
     });
@@ -72,7 +73,7 @@ class _FinancesPageState extends State<FinancesPage> with TickerProviderStateMix
     }
   }
 
-   Widget _buildTopBar() {
+  Widget _buildTopBar() {
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -116,8 +117,7 @@ class _FinancesPageState extends State<FinancesPage> with TickerProviderStateMix
     );
   }
 
-
-   Widget _buildNotificationButton() {
+  Widget _buildNotificationButton() {
     return AnimatedBuilder(
       animation: _pulseAnimation,
       builder: (context, child) {
@@ -186,7 +186,8 @@ class _FinancesPageState extends State<FinancesPage> with TickerProviderStateMix
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: AppColors.primaryOrange.withOpacity(0.3 * _pulseAnimation.value),
+                    color: AppColors.primaryOrange
+                        .withOpacity(0.3 * _pulseAnimation.value),
                     width: 2,
                   ),
                 ),
@@ -203,7 +204,7 @@ class _FinancesPageState extends State<FinancesPage> with TickerProviderStateMix
     );
   }
 
-   Widget _buildProfileAvatar() {
+  Widget _buildProfileAvatar() {
     return Container(
       decoration: BoxDecoration(
         shape: BoxShape.circle,
@@ -233,7 +234,6 @@ class _FinancesPageState extends State<FinancesPage> with TickerProviderStateMix
       ),
     );
   }
-
 
   Widget _buildPageHeader() {
     return Padding(
@@ -270,7 +270,8 @@ class _FinancesPageState extends State<FinancesPage> with TickerProviderStateMix
                 },
                 borderRadius: BorderRadius.circular(16),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: const [
@@ -299,7 +300,7 @@ class _FinancesPageState extends State<FinancesPage> with TickerProviderStateMix
     );
   }
 
-   Widget _buildRunningBalancesCard() {
+  Widget _buildRunningBalancesCard() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
       child: Container(
@@ -329,7 +330,8 @@ class _FinancesPageState extends State<FinancesPage> with TickerProviderStateMix
               ),
             ),
             const SizedBox(height: 24),
-            _buildBalanceItem('John Doe (You)', '+33.04', isPositive: true, isCurrentUser: true),
+            _buildBalanceItem('John Doe (You)', '+33.04',
+                isPositive: true, isCurrentUser: true),
             const SizedBox(height: 16),
             _buildBalanceItem('Sarah Johnson', '33.49', isPositive: false),
             const SizedBox(height: 16),
@@ -340,8 +342,8 @@ class _FinancesPageState extends State<FinancesPage> with TickerProviderStateMix
     );
   }
 
-
-    Widget _buildBalanceItem(String name, String amount, {bool isPositive = false, bool isCurrentUser = false}) {
+  Widget _buildBalanceItem(String name, String amount,
+      {bool isPositive = false, bool isCurrentUser = false}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -365,7 +367,7 @@ class _FinancesPageState extends State<FinancesPage> with TickerProviderStateMix
     );
   }
 
-Widget _buildExpensesList() {
+  Widget _buildExpensesList() {
     return Column(
       children: [
         _buildExpenseCard(
@@ -395,7 +397,8 @@ Widget _buildExpensesList() {
     );
   }
 
-Widget _buildExpenseCard(String title, String amount, String paidBy, String date, List<String> participants) {
+  Widget _buildExpenseCard(String title, String amount, String paidBy,
+      String date, List<String> participants) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Container(
@@ -459,7 +462,9 @@ Widget _buildExpenseCard(String title, String amount, String paidBy, String date
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: participants.map((participant) => _buildParticipantChip(participant)).toList(),
+              children: participants
+                  .map((participant) => _buildParticipantChip(participant))
+                  .toList(),
             ),
           ],
         ),
@@ -467,11 +472,10 @@ Widget _buildExpenseCard(String title, String amount, String paidBy, String date
     );
   }
 
-
-   Widget _buildParticipantChip(String name) {
+  Widget _buildParticipantChip(String name) {
     Color backgroundColor;
     Color textColor;
-    
+
     if (name == 'John Doe') {
       backgroundColor = AppColors.primaryBlue.withOpacity(0.1);
       textColor = AppColors.primaryBlue;
@@ -500,7 +504,7 @@ Widget _buildExpenseCard(String title, String amount, String paidBy, String date
     );
   }
 
-Widget _buildBottomNavigation() {
+  Widget _buildBottomNavigation() {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.white,
@@ -551,7 +555,7 @@ Widget _buildBottomNavigation() {
     );
   }
 
-    @override
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[50],
@@ -581,6 +585,4 @@ Widget _buildBottomNavigation() {
       bottomNavigationBar: _buildBottomNavigation(),
     );
   }
-
-
 }

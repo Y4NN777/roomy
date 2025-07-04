@@ -203,5 +203,35 @@ class _FinancesPageState extends State<FinancesPage> with TickerProviderStateMix
     );
   }
 
+   Widget _buildProfileAvatar() {
+    return Container(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: AppColors.white.withOpacity(0.3),
+          width: 2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.white.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: CircleAvatar(
+        backgroundColor: AppColors.white.withOpacity(0.2),
+        radius: 22,
+        child: const Text(
+          'JD',
+          style: TextStyle(
+            color: AppColors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
+    );
+  }
 
 }

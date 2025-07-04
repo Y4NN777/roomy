@@ -551,6 +551,36 @@ Widget _buildBottomNavigation() {
     );
   }
 
+    @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.grey[50],
+      body: FadeTransition(
+        opacity: _fadeAnimation,
+        child: Column(
+          children: [
+            _buildTopBar(),
+            Expanded(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildPageHeader(),
+                    _buildRunningBalancesCard(),
+                    const SizedBox(height: 24),
+                    _buildExpensesList(),
+                    const SizedBox(height: 32),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      bottomNavigationBar: _buildBottomNavigation(),
+    );
+  }
 
 
 }

@@ -299,5 +299,47 @@ class _FinancesPageState extends State<FinancesPage> with TickerProviderStateMix
     );
   }
 
+   Widget _buildRunningBalancesCard() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      child: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.1),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Running Balances',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.w800,
+                color: Colors.grey[900],
+                letterSpacing: -0.5,
+              ),
+            ),
+            const SizedBox(height: 24),
+            _buildBalanceItem('John Doe (You)', '+33.04', isPositive: true, isCurrentUser: true),
+            const SizedBox(height: 16),
+            _buildBalanceItem('Sarah Johnson', '33.49', isPositive: false),
+            const SizedBox(height: 16),
+            _buildBalanceItem('Mike Chen', '+0.45', isPositive: true),
+          ],
+        ),
+      ),
+    );
+  }
+
+
 
 }

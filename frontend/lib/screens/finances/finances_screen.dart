@@ -72,5 +72,49 @@ class _FinancesPageState extends State<FinancesPage> with TickerProviderStateMix
     }
   }
 
+   Widget _buildTopBar() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.primaryBlue,
+            AppColors.primaryBlue.withOpacity(0.95),
+          ],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primaryBlue.withOpacity(0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.only(top: 60, left: 24, right: 24, bottom: 24),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Text(
+            'Roomy',
+            style: TextStyle(
+              color: AppColors.white,
+              fontSize: 32,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.5,
+            ),
+          ),
+          Row(
+            children: [
+              _buildNotificationButton(),
+              const SizedBox(width: 16),
+              _buildProfileAvatar(),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
 
 }

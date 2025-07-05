@@ -50,6 +50,41 @@ const userSchema = new mongoose.Schema({
       default: 'system',
     },
   },
+
+  notificationPreferences: {
+    email: {
+      taskAssigned: { type: Boolean, default: true },
+      taskCompleted: { type: Boolean, default: true },
+      taskDueSoon: { type: Boolean, default: true },
+      expenseAdded: { type: Boolean, default: true },
+      expenseSplitPaid: { type: Boolean, default: true },
+      groupMemberJoined: { type: Boolean, default: false },
+      aiTasksReady: { type: Boolean, default: true }
+    },
+    push: {
+      taskAssigned: { type: Boolean, default: true },
+      taskCompleted: { type: Boolean, default: false },
+      taskDueSoon: { type: Boolean, default: true },
+      expenseAdded: { type: Boolean, default: true },
+      expenseSplitPaid: { type: Boolean, default: true },
+      groupMemberJoined: { type: Boolean, default: false },
+      aiTasksReady: { type: Boolean, default: true }
+    },
+    inApp: {
+      taskAssigned: { type: Boolean, default: true },
+      taskCompleted: { type: Boolean, default: true },
+      taskDueSoon: { type: Boolean, default: true },
+      expenseAdded: { type: Boolean, default: true },
+      expenseSplitPaid: { type: Boolean, default: true },
+      groupMemberJoined: { type: Boolean, default: true },
+      aiTasksReady: { type: Boolean, default: true }
+    },
+    quietHours: {
+      enabled: { type: Boolean, default: false },
+      startTime: { type: String, default: '22:00' },
+      endTime: { type: String, default: '08:00' }
+    }
+  },
   isActive: {
     type: Boolean,
     default: true,

@@ -1,4 +1,5 @@
 const { GoogleGenerativeAI } = require('@google/genai');
+const { EventTypes } = require('../utils/eventTypes')
 
 class AIService {
   constructor() {
@@ -82,6 +83,63 @@ class AIService {
         timestamp: new Date()
       });
       
+      return this.createFallbackResponse(text, context);
+    }
+  }
+
+  async performAIProcessing(text, context){
+    if (this.isEnabled){
+      throw new Error('AI service not available')
+    }
+
+    try {
+      const startTime = Date.now();
+
+      // Extract members mentions first 
+      const memberInfo = this.extractMemberMentions(text, context.groupMembers || []);
+
+      // Build enhanced prompt
+      const prompt = this.buildSmartPrompt(text,context, memberInfo);
+
+      console.log('Processing with AI: ', text.substring(0,100) + '...');
+
+      // Call the gemini model
+      const result = await this.model.generateContent(prompt);
+      const responseText = result.response.text();
+
+
+      //Parse and enhance the response
+
+      const cleanedResponse = this.cleanJsonResponse(responseText);
+      const parsedResponse = JSON.parse(cleanedResponse);
+
+      //Post process assignments to ensure accuracy
+
+      const enhancedTasks = this.validateAndEnhanceAssignments(
+        parsedResponse.tasks || [],
+        memberInfo,
+        context.groupMembers || []
+      );
+
+      const processingOne = Date.now() - startTime;
+      console.log(`✅ AI generated ${enhancedTasks.length} tasks in ${processingTime}ms`);
+      
+      return {
+        originalText: text,
+        suggestedTasks: enhancedTasks,
+        confidence: parsedResponse.confidence || 0.8,
+        processingTime: processingTime,
+        memberMentions: memberInfo.mentions,
+        metadata: {
+          detectedCategories: parsedResponse.categories || [],
+          assignmentStrategy: parsedResponse.assignmentStrategy || 'automatic',
+          aiModel: 'gemini-2.0-flash-exp',
+          fallbackUsed: false
+        }
+      };
+    } catch (error) {
+      console.error('❌ AI processing error:', error);
+      // Return intelligent fallback
       return this.createFallbackResponse(text, context);
     }
   }

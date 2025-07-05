@@ -4,6 +4,17 @@ const logger = require('../utils/logger');
 const CONSTANTS = require('../utils/constants');
 
 class GroupService {
+    constructor() {
+    this.notificationService = null;
+  }
+
+  getNotificationService() {
+    if (!this.notificationService) {
+      this.notificationService = require('./notificationService');
+    }
+    return this.notificationService;
+  }
+  
   async createGroup(groupData, creatorId) {
     try {
       // Check if user is already in a group

@@ -2,10 +2,13 @@ const aiService = require('../../services/aiService');
 const taskService = require('../../services/taskService');
 const groupService = require('../../services/groupService');
 const responseHelper = require('../../utils/responseHelper');
+const eventBus = require('../../utils/eventBus')
+const eventTypes = require('../../utils/eventTypes')
+const groupContextService = require('../../services/groupContextService');
 
 class AIController {
   
-  // Main endpoint: Process voice/text input
+  // Processes voice or text input to generate task suggestions using the AI service.
   async processVoiceInput(req, res) {
     try {
       const { text, groupId } = req.body;
@@ -20,14 +23,13 @@ class AIController {
         return responseHelper.error(res, 'User must be in a group to use AI features', 400);
       }
       
-      // Get group context for better AI processing
-      const groupContext = await this.getGroupContext(userGroupId, userId);
+      // Retrieves contextual information about the group to improve the accuracy of AI processing.
+      const groupContext = await groupContextService.getGroupContext(userGroupId, userId);
       
-      // Process with AI
+      // Sends the input text and group context to the AI service for processing.
       const result = await aiService.processVoiceToTasks(text, groupContext);
       
-      // Log for monitoring
-      console.log(`🤖 AI processed input for user ${userId}: ${result.suggestedTasks.length} tasks generated`);
+      
       
       responseHelper.success(res, {
         ...result,
@@ -39,7 +41,7 @@ class AIController {
       }, 'Voice input processed successfully');
       
     } catch (error) {
-      console.error('❌ AI processing error:', error);
+      console.error('AI processing error:', error);
       
       if (error.message.includes('AI service is not available')) {
         return responseHelper.error(res, 'AI service is currently unavailable', 503);
@@ -49,17 +51,16 @@ class AIController {
     }
   }
   
-/**
-   * Enhanced confirmTasks with event emission
-   */
+  // Confirms and creates tasks based on AI suggestions and emits an event upon completion.
   async confirmAndCreateTasks(tasks, context = {}) {
     const { userId, groupId, originalText } = context;
     
     try {
-      // Create tasks (this would call your task service)
+      // TODO: The 'createTasksInSystem' method is not defined in this class.
+      // Creates the tasks in the system using the dedicated task service.
       const createdTasks = await this.createTasksInSystem(tasks, context);
       
-      // Emit tasks confirmed event
+      // Emits an event to notify other parts of the system that AI-generated tasks have been confirmed.
       eventBus.safeEmit(EventTypes.AI_TASKS_CONFIRMED, {
         userId,
         groupId,
@@ -71,12 +72,12 @@ class AIController {
       return createdTasks;
       
     } catch (error) {
-      console.error('❌ Task creation error:', error);
+      console.error('Task creation error:', error);
       throw error;
     }
   }
   
-  // Test AI service (for development/debugging)
+  // Provides a test endpoint for verifying the AI service's availability and processing capabilities.
   async testAI(req, res) {
     try {
       if (process.env.NODE_ENV === 'production') {
@@ -91,16 +92,16 @@ class AIController {
         return responseHelper.error(res, 'AI service is not available', 503);
       }
       
-      // Test connection first
+      // First, tests the connection to the AI service to ensure it is responsive.
       const connectionTest = await aiService.testConnection();
       if (!connectionTest.connected) {
         return responseHelper.error(res, `AI connection failed: ${connectionTest.error}`, 503);
       }
       
-      // If test input provided, process it
+      // If test input is provided in the request, it is processed using the AI service.
       let result = null;
       if (testInput && userGroupId) {
-        const groupContext = await this.getGroupContext(userGroupId, userId);
+        const groupContext = await groupContextService.getGroupContext(userGroupId, userId);
         result = await aiService.processVoiceToTasks(testInput, groupContext);
       }
       
@@ -112,12 +113,12 @@ class AIController {
       }, 'AI service test completed');
       
     } catch (error) {
-      console.error('❌ AI test error:', error);
+      console.error('AI test error:', error);
       responseHelper.error(res, `AI test failed: ${error.message}`, 500);
     }
   }
   
-  // Get AI service status
+  // Retrieves the current operational status and capabilities of the AI service.
   async getStatus(req, res) {
     try {
       const status = {
@@ -141,36 +142,11 @@ class AIController {
       responseHelper.success(res, status, 'AI service status retrieved');
       
     } catch (error) {
-      console.error('❌ Error getting AI status:', error);
+      console.error('Error getting AI status:', error);
       responseHelper.error(res, 'Failed to get AI status', 500);
     }
   }
-  
-  // Helper: Get group context for AI processing
-  async getGroupContext(groupId, userId) {
-    try {
-      const [groupMembers, recentTasks] = await Promise.all([
-        groupService.getGroupMembers(groupId),
-        taskService.getGroupTasks(groupId, { limit: 10, sortBy: 'createdAt', sortOrder: 'desc' })
-      ]);
-      
-      return {
-        groupMembers: groupMembers.map(member => ({
-          id: member.userId._id,
-          name: member.userId.name,
-          role: member.role
-        })),
-        recentTasks: recentTasks.map(task => ({
-          title: task.title,
-          category: task.category,
-          status: task.status
-        }))
-      };
-    } catch (error) {
-      console.error('❌ Error getting group context:', error);
-      return { groupMembers: [], recentTasks: [] };
-    }
-  }
+
 }
 
 module.exports = new AIController();

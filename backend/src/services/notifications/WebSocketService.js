@@ -7,6 +7,7 @@ const eventBus = require('./eventBus');
 const { EventTypes } = require('../../utils/eventTypes');
 
 // WebSocketService handles all real-time bidirectional communication between the server and clients.
+// Note: This service should be initialized after the notification service to avoid circular dependencies.
 class WebSocketService {
   constructor() {
     this.io = null;
@@ -17,23 +18,30 @@ class WebSocketService {
 
   // Initializes the Socket.IO server, configures CORS, and sets up all necessary handlers and listeners.
   initialize(server) {
-    this.io = socketIo(server, {
-      cors: {
-        origin: process.env.FRONTEND_URL || ["http://localhost:3000", "http://localhost:5173"],
-        methods: ["GET", "POST"],
-        credentials: true
-      },
-      transports: ['websocket', 'polling'],
-      pingTimeout: 60000,
-      pingInterval: 25000
-    });
+    try {
+      console.log('🔌 Initializing WebSocket service...');
+      
+      this.io = socketIo(server, {
+        cors: {
+          origin: process.env.FRONTEND_URL || ["http://localhost:3000", "http://localhost:5173"],
+          methods: ["GET", "POST"],
+          credentials: true
+        },
+        transports: ['websocket', 'polling'],
+        pingTimeout: 60000,
+        pingInterval: 25000
+      });
 
-    this.setupMiddleware();
-    this.setupConnectionHandlers();
-    this.setupEventListeners();
-    
-    console.log('🔌 WebSocket service initialized');
-    return this.io;
+      this.setupMiddleware();
+      this.setupConnectionHandlers();
+      this.setupEventListeners();
+      
+      console.log('✅ WebSocket service initialized successfully');
+      return this.io;
+    } catch (error) {
+      console.error('❌ Error initializing WebSocket service:', error);
+      throw error;
+    }
   }
 
   // Configures the authentication middleware for Socket.IO to validate JWT tokens on connection.

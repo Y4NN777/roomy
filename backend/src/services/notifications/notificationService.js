@@ -6,7 +6,32 @@ const User = require('../../models/User');
 const eventBus = require('./eventBus');
 const Group = require('../../models/Group');
 const Notification = require('../../models/Notification');
-const { EventTypes, NotificationTypes, NotificationPriority } = require('../../utils/eventTypes'); 
+const { EventTypes, NotificationTypes, NotificationPriority } = require('../../utils/eventTypes');
+
+// WebSocket service will be injected to avoid circular dependencies
+let _webSocketService = null;
+
+/**
+ * Sets the WebSocket service instance to use for real-time notifications
+ * This must be called before any notifications are sent
+ * @param {Object} service - The WebSocket service instance
+ */
+function setWebSocketService(service) {
+  _webSocketService = service;
+  logger.info('WebSocket service set in notification service');
+}
+
+/**
+ * Gets the WebSocket service instance
+ * @throws {Error} If the WebSocket service has not been set
+ * @returns {Object} The WebSocket service instance
+ */
+function getWebSocketService() {
+  if (!_webSocketService) {
+    throw new Error('WebSocket service not initialized. Call setWebSocketService() first.');
+  }
+  return _webSocketService;
+}
 
 
 // NotificationService handles notifications: in-app, email, and real-time updates.
@@ -247,8 +272,8 @@ class NotificationService {
       if (result) {
         // Send real-time update
         try {
-          const webSocketService = require('./WebSocketService');
-          webSocketService.sendToUser(userId, 'notification:deleted', {
+          ;
+          getWebSocketService().sendToUser(userId, 'notification:deleted', {
             notificationId
           });
         } catch (error) {
@@ -596,8 +621,8 @@ class NotificationService {
       if (result.modifiedCount > 0) {
         // Send real-time update
         try {
-          const webSocketService = require('./WebSocketService');
-          webSocketService.sendToUser(userId, 'notification:bulk_read', {
+          ;
+          getWebSocketService().sendToUser(userId, 'notification:bulk_read', {
             notificationIds,
             readCount: result.modifiedCount
           });
@@ -623,8 +648,8 @@ class NotificationService {
       if (result.deletedCount > 0) {
         // Send real-time update
         try {
-          const webSocketService = require('./WebSocketService');
-          webSocketService.sendToUser(userId, 'notification:bulk_deleted', {
+          ;
+          getWebSocketService().sendToUser(userId, 'notification:bulk_deleted', {
             notificationIds,
             deletedCount: result.deletedCount
           });
@@ -652,8 +677,8 @@ class NotificationService {
       if (result.deletedCount > 0) {
         // Send real-time update
         try {
-          const webSocketService = require('./WebSocketService');
-          webSocketService.sendToUser(userId, 'notification:bulk_deleted', {
+          ;
+          getWebSocketService().sendToUser(userId, 'notification:bulk_deleted', {
             olderThanDays,
             deletedCount: result.deletedCount
           });
@@ -727,6 +752,20 @@ class NotificationService {
 
   async snoozeNotification(notificationId, userId, snoozeUntil) {
     try {
+      // First find the current notification to get the current snoozeCount
+      const currentNotification = await Notification.findOne({
+        _id: notificationId,
+        recipientId: userId
+      });
+      
+      if (!currentNotification) {
+        throw new Error('Notification not found');
+      }
+      
+      // Calculate the new snooze count
+      const currentSnoozeCount = currentNotification.snoozeCount || 0;
+      
+      // Update the notification with the new snooze count
       const notification = await Notification.findOneAndUpdate(
         {
           _id: notificationId,
@@ -735,7 +774,7 @@ class NotificationService {
         {
           isSnoozed: true,
           snoozedUntil: new Date(snoozeUntil),
-          snoozeCount: { $inc: 1 }
+          snoozeCount: currentSnoozeCount + 1
         },
         { new: true }
       );
@@ -743,8 +782,8 @@ class NotificationService {
       if (notification) {
         // Send real-time update
         try {
-          const webSocketService = require('./WebSocketService');
-          webSocketService.sendToUser(userId, 'notification:snoozed', {
+          ;
+          getWebSocketService().sendToUser(userId, 'notification:snoozed', {
             notificationId,
             snoozedUntil: snoozeUntil
           });
@@ -787,7 +826,7 @@ class NotificationService {
         Notification.aggregate([
           {
             $match: {
-              recipientId: mongoose.Types.ObjectId(userId),
+              recipientId: new mongoose.Types.ObjectId(userId),
               createdAt: { $gte: startDate, $lt: endDate }
             }
           },
@@ -1360,7 +1399,7 @@ class NotificationService {
           groupName,
           memberShare: split.amount,
           memberName: split.memberId.name
-        });
+        });create
 
         try {
           const result = await this.sendEmail(
@@ -1484,7 +1523,7 @@ class NotificationService {
       let delivered = false;
       try {
         const webSocketService = webSocketService || require('./WebSocketService'); 
-        delivered = webSocketService.sendToUser(
+        delivered = getWebSocketService().sendToUser(
           notificationData.recipientId, 
           'notification:new', 
           populatedNotification
@@ -1622,8 +1661,8 @@ class NotificationService {
     
     // Send real-time update about AI processing completion
     try {
-      const webSocketService = require('./WebSocketService');
-      webSocketService.sendToUser(userId, 'ai:processing_completed', {
+      ;
+      getWebSocketService().sendToUser(userId, 'ai:processing_completed', {
         suggestedTasks: result.suggestedTasks,
         confidence: result.confidence,
         memberMentions: result.memberMentions,
@@ -1780,8 +1819,8 @@ class NotificationService {
     if (notification) {
       // Send real-time update
       try {
-        const webSocketService = require('./WebSocketService');
-        webSocketService.sendToUser(userId, 'notification:read', {
+        ;
+        getWebSocketService().sendToUser(userId, 'notification:read', {
           notificationId,
           readAt: notification.readAt
         });
@@ -1806,8 +1845,8 @@ class NotificationService {
     if (result.modifiedCount > 0) {
       // Send real-time update
       try {
-        const webSocketService = require('./WebSocketService');
-        webSocketService.sendToUser(userId, 'notification:all_read', {
+        ;
+        getWebSocketService().sendToUser(userId, 'notification:all_read', {
           groupId,
           readCount: result.modifiedCount
         });
@@ -2153,4 +2192,11 @@ class NotificationService {
   }
 }
 
-module.exports = new NotificationService();
+// Create and export the notification service instance
+const notificationService = new NotificationService();
+
+// Add setWebSocketService to the instance
+notificationService.setWebSocketService = setWebSocketService;
+
+// Export the instance
+module.exports = notificationService;

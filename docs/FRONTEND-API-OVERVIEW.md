@@ -799,187 +799,487 @@ class BalanceCard extends StatelessWidget {
 
 ---
 
-## AI Voice Processing
+## AI Voice & Text Processing
 
-### Current Status: Planned Implementation
+### Overview
 
-The AI voice processing endpoints exist as stubs with full API contracts defined, but backend processing logic is not yet implemented.
+The AI system enables natural language task creation and management using Google's Gemini 2.0 Flash model. It supports both voice and text input with context-aware processing.
 
-### 1. Voice Input Processing
+### Key Features
 
-**Endpoint:** `POST /api/v1/ai/process-voice`
+- Natural language understanding for task creation
+- Context-aware processing using group data
+- Member mention detection and assignment
+- Confidence scoring for suggestions
+- Fallback system for AI unavailability
 
-**Purpose:** Convert natural language voice input into structured task suggestions.
+### API Endpoints
+
+#### 1. Process Voice/Text Input
+
+**Endpoint:** `POST /api/v1/ai/process`
+
+**Purpose:** Process natural language input and extract structured task data.
 
 **Request:**
-
 ```json
 {
-  "text": "The kitchen is really messy and we're completely out of milk and bread",
-  "audioUrl": "data:audio/webm;base64,GkX...", // Optional audio data
+  "text": "Ask John to buy milk tomorrow at 5pm",
+  "groupId": "60d5ecb8f8b1a6b5d8f4e3c2",
   "context": {
-    "groupId": "64f8a1b2c3d4e5f6a7b8c9d1",
-    "currentLocation": "kitchen",
-    "timeOfDay": "morning"
+    "previousMessages": [],
+    "userPreferences": {}
   }
 }
 ```
 
-**Expected Response:**
-
+**Response:**
 ```json
 {
   "success": true,
   "data": {
-    "transcription": "The kitchen is really messy and we're completely out of milk and bread",
     "suggestedTasks": [
       {
-        "title": "Clean kitchen",
-        "description": "Deep clean kitchen counters, sink, and appliances",
-        "suggestedAssignee": "64f8a1b2c3d4e5f6a7b8c9d0",
-        "priority": "high",
-        "category": "cleaning",
-        "estimatedDuration": 45,
-        "dueDate": "2025-07-02T20:00:00Z"
-      },
-      {
-        "title": "Buy milk and bread",
-        "description": "Purchase milk and bread from grocery store",
-        "suggestedAssignee": "64f8a1b2c3d4e5f6a7b8c9d3",
-        "priority": "medium", 
-        "category": "shopping",
-        "estimatedDuration": 30,
-        "dueDate": "2025-07-03T18:00:00Z"
+        "title": "Buy milk",
+        "description": "",
+        "assignedTo": "60d5ecb8f8b1a6b5d8f4e3c1",
+        "dueDate": "2025-07-08T17:00:00.000Z",
+        "priority": "medium",
+        "confidence": 0.92
       }
     ],
-    "confidence": 0.92,
-    "processingTime": 1200
+    "memberMentions": [
+      {
+        "userId": "60d5ecb8f8b1a6b5d8f4e3c1",
+        "name": "John",
+        "confidence": 0.96
+      }
+    ],
+    "metadata": {
+      "model": "gemini-2.0-flash-exp",
+      "processingTime": 1200
+    }
   }
 }
 ```
 
-### 2. Task Confirmation
+#### 2. Confirm and Create Tasks
 
 **Endpoint:** `POST /api/v1/ai/confirm-tasks`
 
-**Purpose:** Create confirmed tasks from AI suggestions with user modifications.
+**Purpose:** Create tasks from AI suggestions after user confirmation.
 
 **Request:**
-
 ```json
 {
   "tasks": [
     {
-      "title": "Clean kitchen thoroughly",
-      "description": "Deep clean kitchen area including counters and appliances", 
-      "assignedTo": "64f8a1b2c3d4e5f6a7b8c9d0",
-      "priority": "high",
-      "category": "cleaning",
-      "dueDate": "2025-07-02T20:00:00Z",
-      "aiGenerated": true,
-      "originalVoiceInput": "The kitchen is really messy...",
-      "aiConfidence": 0.92
+      "title": "Buy milk",
+      "assignedTo": "60d5ecb8f8b1a6b5d8f4e3c1",
+      "dueDate": "2025-07-08T17:00:00.000Z",
+      "priority": "medium"
     }
-  ]
+  ],
+  "originalText": "Ask John to buy milk tomorrow at 5pm",
+  "groupId": "60d5ecb8f8b1a6b5d8f4e3c2"
 }
 ```
 
-### Flutter Voice Integration (Future)
+### Flutter Integration
+
+#### AI Service Wrapper
 
 ```dart
-class VoiceTaskCreation extends StatefulWidget {
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        VoiceRecordingButton(
-          onRecordingComplete: (audioFile) async {
-            // Convert audio to text
-            final transcription = await speechToText.listen();
-            
-            // Send to AI processing
-            final suggestions = await aiService.processVoiceInput(
-              text: transcription,
-              context: VoiceContext(
-                groupId: currentGroup.id,
-                location: 'kitchen',
-              ),
-            );
-            
-            // Show suggestions for confirmation
-            showTaskSuggestions(suggestions);
-          },
-        ),
-        if (isRecording) VoiceVisualizerWidget(),
-        if (transcription.isNotEmpty) TranscriptionDisplay(transcription),
-        if (suggestions.isNotEmpty) TaskSuggestionsWidget(suggestions),
-      ],
-    );
+class AIService {
+  final Dio _dio;
+  
+  AIService({Dio? dio}) : _dio = dio ?? Dio();
+  
+  Future<AIProcessResponse> processInput({
+    required String text,
+    required String groupId,
+    Map<String, dynamic>? context,
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/ai/process',
+        data: {
+          'text': text,
+          'groupId': groupId,
+          'context': context ?? {},
+        },
+      );
+      return AIProcessResponse.fromJson(response.data);
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
   }
+  
+  // ... other methods
 }
 ```
+
+#### AI Task Creation Widget
+
+```dart
+class AITaskInput extends StatefulWidget {
+  final String groupId;
+  
+  const AITaskInput({Key? key, required this.groupId}) : super(key: key);
+
+  @override
+  _AITaskInputState createState() => _AITaskInputState();
+}
+
+class _AITaskInputState extends State<AITaskInput> {
+  final _aiService = AIService();
+  final _textController = TextEditingController();
+  bool _isProcessing = false;
+  
+  Future<void> _processInput() async {
+    if (_textController.text.trim().isEmpty) return;
+    
+    setState(() => _isProcessing = true);
+    
+    try {
+      final response = await _aiService.processInput(
+        text: _textController.text,
+        groupId: widget.groupId,
+      );
+      
+      if (mounted) {
+        await _showTaskPreview(response);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to process input: ${e.toString()}')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isProcessing = false);
+      }
+    }
+  }
+  
+  // ... rest of the implementation
+}
+```
+
+### Error Handling
+
+| Error Code | Description | Suggested Action |
+|------------|-------------|------------------|
+| 400 | Invalid input or missing parameters | Validate user input and retry |
+| 401 | Unauthorized | Refresh token or re-authenticate |
+| 429 | Rate limit exceeded | Implement exponential backoff |
+| 503 | AI service unavailable | Show fallback UI or try later |
+
+### Best Practices
+
+1. **Progressive Enhancement**
+   - Always provide a fallback for when AI features are unavailable
+   - Show confidence scores to set user expectations
+   - Allow manual override of AI suggestions
+
+2. **Performance**
+   - Implement request debouncing for text input
+   - Cache common queries
+   - Show loading indicators for AI operations
+
+3. **User Experience**
+   - Provide clear feedback during processing
+   - Show preview before creating tasks
+   - Allow easy editing of AI suggestions
 
 ---
 
-## Notifications
+## Real-Time Notifications System
 
-### Notification System Architecture
+Roomy's notification system provides real-time updates through WebSockets while maintaining email notifications for important events. The system is designed for reliability, performance, and a seamless user experience.
 
-The notification system supports both email notifications (implemented) and real-time in-app notifications (planned).
+### Architecture Overview
 
-### Email Notifications (Implemented)
+```mermaid
+graph TD
+    A[Client App] <-->|WebSocket| B[Notification Service]
+    B <--> C[Event Bus]
+    C <--> D[Task Service]
+    C <--> E[Expense Service]
+    C <--> F[Group Service]
+    B -->|Email| G[Email Service]
+    B -->|Push| H[Push Service]
+```
 
-| Event Type | Trigger | Recipients | Template |
-|------------|---------|------------|----------|
-| Group Invite | Email invitation sent | Invitee | Group invitation with join link |
-| Welcome | User joins group | New member | Welcome message with group info |
-| Role Change | Admin transfer | Previous & new admin | Role change notification |
-| Task Assignment | Task assigned to user | Assignee | Task details and due date |
-| Task Completion | Task marked complete | Group members | Completion notification |
-| Task Due Soon | 24h before due date | Assignee | Reminder notification |
-| Expense Added | New expense logged | Group members | Expense details and split |
-| Payment Reminder | Manual or scheduled | Members with unpaid amounts | Balance and payment request |
+### WebSocket Connection
 
-### Real-time Notifications (Planned)
-
-**Get Notifications:** `GET /api/v1/notifications`
-
-**Mark as Read:** `POST /api/v1/notifications/mark-read`
-
-**WebSocket Connection:** `ws://localhost:3000/notifications`
-
-**Flutter Integration Pattern:**
+#### Connection Management
 
 ```dart
 class NotificationService {
-  late WebSocketChannel _channel;
+  static final NotificationService _instance = NotificationService._internal();
+  WebSocketChannel? _socket;
+  final _notificationController = StreamController<Notification>.broadcast();
+  final _reconnectDelay = const Duration(seconds: 1);
+  Timer? _reconnectTimer;
+  bool _isConnected = false;
   
-  void connect() {
-    _channel = WebSocketChannel.connect(
-      Uri.parse('ws://localhost:3000/notifications'),
-      headers: {'Authorization': 'Bearer $accessToken'},
-    );
-    
-    _channel.stream.listen((data) {
-      final notification = Notification.fromJson(json.decode(data));
+  Stream<Notification> get notifications => _notificationController.stream;
+  bool get isConnected => _isConnected;
+  
+  NotificationService._internal() {
+    _connect();
+  }
+  
+  Future<void> _connect() async {
+    try {
+      final token = await _getAuthToken();
+      _socket = WebSocketChannel.connect(
+        Uri.parse('wss://api.roomy.app/ws/notifications'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      
+      _socket!.stream.listen(
+        _handleIncomingMessage,
+        onError: _handleError,
+        onDone: _handleDisconnect,
+        cancelOnError: true,
+      );
+      
+      _isConnected = true;
+      _resetReconnectTimer();
+      _scheduleHeartbeat();
+      
+    } catch (e) {
+      _scheduleReconnect();
+    }
+  }
+  
+  void _handleIncomingMessage(dynamic message) {
+    try {
+      final notification = Notification.fromJson(
+        jsonDecode(utf8.decode(message as List<int>)),
+      );
+      _notificationController.add(notification);
+      _handleNotification(notification);
+    } catch (e) {
+      _logError('Error processing message: $e');
+    }
+  }
+  
+  // ... other methods ...
+}
+```
+
+### Notification Types & Payloads
+
+#### Real-Time Events
+
+| Event Type | Payload | Description |
+|------------|---------|-------------|
+| `task_created` | `{ task: Task, groupId: string }` | New task created in group |
+| `task_updated` | `{ task: Task, updates: object }` | Task details updated |
+| `task_completed` | `{ taskId: string, completedBy: string }` | Task marked as complete |
+| `expense_added` | `{ expense: Expense, groupId: string }` | New expense added |
+| `expense_updated` | `{ expenseId: string, updates: object }` | Expense details updated |
+| `expense_deleted` | `{ expenseId: string, groupId: string }` | Expense removed |
+| `group_updated` | `{ group: Group, updates: object }` | Group details changed |
+| `member_joined` | `{ user: User, groupId: string }` | New member joined group |
+| `member_left` | `{ userId: string, groupId: string }` | Member left the group |
+| `role_changed` | `{ userId: string, groupId: string, newRole: string }` | Member role changed |
+| `payment_received` | `{ fromUserId: string, toUserId: string, amount: number, groupId: string }` | Payment recorded |
+
+#### Email Notifications
+
+| Event Type | Trigger | Recipients | Template |
+|------------|---------|------------|----------|
+| Task Assigned | User assigned to task | Assignee | Task details, due date |
+| Task Due Soon | 24h before due time | Assignee | Task details, due time |
+| Task Overdue | After due time | Assignee | Task details, overdue notice |
+| Task Reminder | Custom reminder time | Assignee | Task reminder details |
+| Expense Added | New expense in group | Group members | Expense details, split amounts |
+| Expense Updated | Expense modified | Affected members | Updated expense details |
+| Group Invite | New member invited | Invited user | Inviter details, group info |
+| Payment Request | Manual payment request | Owing user | Amount, creditor, due date |
+| Payment Reminder | Automatic reminder | Owing user | Amount, creditor, due date |
+| Payment Received | Payment recorded | Payer & Payee | Payment confirmation |
+| Weekly Summary | Weekly digest | Users with activity | Summary of group activity |
+
+### Notification Preferences
+
+Users can customize their notification preferences through the app settings:
+
+```dart
+class NotificationPreferences {
+  bool pushEnabled;
+  bool emailEnabled;
+  Map<NotificationType, NotificationChannel> channelPreferences;
+  
+  // Per-channel preferences
+  bool getPushEnabled(NotificationType type) => 
+      channelPreferences[type]?.push ?? pushEnabled;
+      
+  bool getEmailEnabled(NotificationType type) => 
+      channelPreferences[type]?.email ?? emailEnabled;
+}
+
+enum NotificationType {
+  taskAssigned,
+  taskDueSoon,
+  taskOverdue,
+  taskReminder,
+  expenseAdded,
+  expenseUpdated,
+  groupInvite,
+  paymentRequest,
+  paymentReminder,
+  paymentReceived,
+  weeklySummary,
+}
+```
+
+### API Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/v1/notifications` | Get user notifications |
+| `POST` | `/api/v1/notifications/mark-read` | Mark notifications as read |
+| `DELETE` | `/api/v1/notifications/:id` | Delete a notification |
+| `GET` | `/api/v1/notifications/preferences` | Get notification preferences |
+| `PUT` | `/api/v1/notifications/preferences` | Update preferences |
+| `POST` | `/api/v1/notifications/test` | Send test notification |
+
+### Flutter Integration
+
+#### Notification Service
+
+```dart
+class NotificationHandler {
+  final NotificationService _notificationService;
+  final LocalNotificationService _localNotification;
+  final NavigationService _navigationService;
+  
+  NotificationHandler(
+    this._notificationService,
+    this._localNotification,
+    this._navigationService,
+  ) {
+    _setupNotificationHandlers();
+  }
+  
+  void _setupNotificationHandlers() {
+    _notificationService.notifications.listen((notification) async {
+      // Check user preferences
+      final prefs = await _getUserPreferences();
+      
+      // Show in-app notification
+      if (prefs.getPushEnabled(notification.type)) {
+        await _showLocalNotification(notification);
+      }
+      
+      // Update UI based on notification type
       _handleNotification(notification);
     });
   }
   
+  Future<void> _showLocalNotification(Notification notification) async {
+    await _localNotification.show(
+      id: notification.id.hashCode,
+      title: notification.title,
+      body: notification.body,
+      payload: jsonEncode(notification.toJson()),
+    );
+  }
+  
   void _handleNotification(Notification notification) {
-    // Update UI, show local notification, etc.
     switch (notification.type) {
-      case 'TASK_ASSIGNED':
-        showLocalNotification(notification);
-        updateTaskList();
+      case NotificationType.taskAssigned:
+      case NotificationType.taskDueSoon:
+      case NotificationType.taskOverdue:
+        _handleTaskNotification(notification);
         break;
-      case 'EXPENSE_ADDED':
-        updateExpenseList();
-        updateBalances();
+      case NotificationType.expenseAdded:
+      case NotificationType.expenseUpdated:
+        _handleExpenseNotification(notification);
         break;
+      // ... other handlers
     }
   }
+  
+  // ... other methods
 }
 ```
+
+#### Error Handling & Reconnection
+
+```dart
+class NotificationService {
+  // ... existing code ...
+  
+  void _handleError(dynamic error) {
+    _logError('WebSocket error: $error');
+    _isConnected = false;
+    _scheduleReconnect();
+  }
+  
+  void _handleDisconnect() {
+    _isConnected = false;
+    _scheduleReconnect();
+  }
+  
+  void _scheduleReconnect() {
+    _reconnectTimer?.cancel();
+    _reconnectTimer = Timer(_reconnectDelay, () {
+      if (!_isConnected) {
+        _connect();
+      }
+    });
+  }
+  
+  void _resetReconnectTimer() {
+    _reconnectDelay = const Duration(seconds: 1);
+  }
+  
+  void _scheduleHeartbeat() {
+    Timer.periodic(const Duration(seconds: 30), (timer) {
+      if (_isConnected) {
+        _socket?.sink.add(jsonEncode({'type': 'heartbeat'}));
+      } else {
+        timer.cancel();
+      }
+    });
+  }
+  
+  // ... other methods ...
+}
+```
+
+### Best Practices
+
+1. **Connection Management**
+   - Implement exponential backoff for reconnection
+   - Handle network changes gracefully
+   - Show connection status in the UI
+   - Use ping/pong for connection health
+
+2. **Performance**
+   - Batch notifications when possible
+   - Debounce rapid updates
+   - Use efficient serialization (MessagePack/Protocol Buffers)
+   
+3. **User Experience**
+   - Group related notifications
+   - Provide clear actions
+   - Respect user preferences
+   - Support notification channels (Android)
+   - Handle notification taps appropriately
+
+4. **Testing**
+   - Test different network conditions
+   - Verify notification delivery
+   - Test edge cases (timezone changes, DST, etc.)
+   - Verify proper cleanup on logout
 
 ---
 

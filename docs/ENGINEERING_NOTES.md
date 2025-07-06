@@ -1,6 +1,6 @@
 # Roomy Backend Engineering Notes
 
-## Project Status (as of July 2, 2025)
+## Project Status (as of July 7, 2025)
 
 This document provides an overview of the current state of the Roomy backend, the engineering approaches taken, and guidance for future contributors to complete or extend the work.
 
@@ -11,14 +11,25 @@ This document provides an overview of the current state of the Roomy backend, th
 - **Core Features Implemented:**
   - User authentication (JWT-based)
   - Group management (creation, membership, admin transfer, invites)
-  - Task management (CRUD, assignment, notifications via REST)
+  - Task management (CRUD, assignment, notifications)
   - Expense management (logging, splitting, balances, statistics)
-  - Email notifications for key events
+  - Comprehensive notification system with email and real-time WebSocket support
   - Role-based access and security middleware
+  - Event-driven architecture with decoupled services
 
-- **Not Implemented / Planned:**
-  - Real-time in-app notifications (WebSocket, push logic not implemented)
-  - AI voice/text processing (endpoints and stubs exist, backend logic not implemented)
+- **Recently Implemented (v1):**
+  - Real-time WebSocket notifications
+  - Event bus for decoupled service communication
+  - Notification preferences and delivery tracking
+  - Group activity feeds
+  - Enhanced email templates
+
+- **Planned for Next Version (v1.2.0):**
+  - Push notifications (FCM/APNs)
+  - Advanced AI voice processing
+  - Email verification flow
+  - Enhanced security alerts
+  - Group invitation reminders
 
 ---
 
@@ -51,13 +62,118 @@ This document provides an overview of the current state of the Roomy backend, th
 
 ### Notifications
 
-- **Email notifications** are implemented for group invites, task/expense events, and reminders. See `notificationService.js` for methods like `sendEmail`, `sendGroupInvitation`, `sendWelcomeToGroup`, `sendRoleChangeNotification`, etc.
+**Architecture Overview:**
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   AI Service    │    │  Task Service   │    │ Expense Service │
+│                 │    │                 │    │                 │
+└─────────┬───────┘    └─────────┬───────┘    └─────────┬───────┘
+          │                      │                      │
+          │ emits events         │ emits events         │ emits events
+          ▼                      ▼                      ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    Event Bus (EventEmitter)                     │
+└─────────────────────┬───────────────────────────────────────────┘
+                      │ listens to all events
+                      ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                  Notification Service                           │
+│  • Processes events into notifications                          │
+│  • Stores notifications in DB                                   │
+│  • Determines delivery methods                                  │
+└─────────────────────┬───────────────────────────────────────────┘
+                      │ triggers delivery
+                      ▼
+┌─────────────────┐              ┌─────────────────┐
+│  WebSocket      │              │ Push Notification│
+│  Service        │              │ Service (Future) │
+│  • Real-time    │              │ • FCM/APNs      │
+│  • In-app       │              │ • Email         │
+└─────────────────┘              └─────────────────┘
+```
 
-- **Real-time in-app notifications:** REST endpoints and WebSocket stubs exist, but push logic is not implemented. See `notificationService.js` for planned structure and stub methods like `sendInAppNotification`.
+**Key Components:**
 
-### AI Voice Processing
+1. **Event Bus** (`eventBus.js`)
+   - Central event emitter for cross-service communication
+   - Handles all domain events (tasks, expenses, groups, AI)
+   - Implements error handling and logging
 
-- Endpoints and service stubs exist for AI-driven task creation, but no actual AI logic is implemented. See `aiController.js` and `aiService.js` for extension points.
+2. **Notification Service** (`notificationService.js`)
+   - Processes events into notifications
+   - Manages delivery methods (WebSocket, email)
+   - Handles notification preferences
+   - Tracks delivery status
+
+3. **WebSocket Service** (`WebSocketService.js`)
+   - Manages real-time connections
+   - Handles user presence and group rooms
+   - Implements JWT authentication
+   - Supports direct and broadcast messaging
+
+**Features:**
+- Real-time in-app notifications via WebSockets
+- Email notifications with rich templates
+- Notification preferences per user
+- Read receipts and delivery tracking
+- Group activity feeds
+- Typing indicators and online status
+
+**Key Methods:**
+- `createAndDeliverNotification`: Core notification creation and delivery
+- `markAsRead`/`markAllAsRead`: Notification state management
+- `getUserNotifications`: Retrieves notifications with pagination
+- `broadcastToGroup`: Sends real-time updates to group members
+- `sendEmail`: Handles all email notifications
+
+### AI Voice & Text Processing
+
+**Implementation Status: Partially Implemented (Beta)**
+
+The AI system provides natural language processing for task creation and management, with integration to Google's Generative AI (Gemini 2.0 Flash).
+
+**Key Components:**
+
+1. **AIService (`aiService.js`)**
+   - Handles all AI model interactions
+   - Processes natural language input into structured tasks
+   - Implements fallback mechanisms for AI service unavailability
+   - Emits events for AI processing lifecycle
+
+2. **AIController (`aiController.js`)**
+   - `processVoiceInput`: Main endpoint for processing voice/text input
+   - `confirmAndCreateTasks`: Creates tasks from AI suggestions
+   - `testAI`: Diagnostic endpoint for AI service testing
+
+**Features:**
+- Natural language understanding for task creation
+- Context-aware processing using group and user data
+- Task suggestion with confidence scoring
+- Member mention detection in task assignments
+- Multi-turn conversation support (in progress)
+
+**API Endpoints:**
+- `POST /api/v1/ai/process` - Process voice/text input
+- `POST /api/v1/ai/confirm-tasks` - Confirm and create suggested tasks
+- `POST /api/v1/ai/test` - Test AI service (development only)
+
+**Configuration:**
+- Requires `GEMINI_API_KEY` environment variable
+- Model: `gemini-2.0-flash-exp`
+- Temperature: 0.7 (balanced creativity/consistency)
+
+**Known Limitations:**
+- Currently in beta with rate limits
+- Limited to English language input
+- May require refinement of task extraction prompts
+- No support for complex task dependencies
+
+**Future Enhancements (Planned):**
+- Support for additional languages
+- Improved context retention
+- Integration with calendar/scheduling
+- Advanced task dependency management
+- Custom model fine-tuning
 
 ### Testing
 
@@ -98,6 +214,41 @@ This document provides an overview of the current state of the Roomy backend, th
 - Other models: `User.js`, `Group.js`, `Task.js`.
 
 ### Middleware
+
+#### Authentication & Security
+- **JWT Authentication** (`auth.js`)
+  - Validates access tokens
+  - Handles token refresh
+  - Manages user sessions
+  - Prevents token reuse
+
+#### Authorization
+- **Group Permissions** (`groupPermissions.js`)
+  - `verifyGroupMembership`: Validates group access
+  - `verifyGroupAdmin`: Restricts to admin actions
+  - `optionalGroupMembership`: For public group data
+
+- **Expense Permissions** (`expensePermissions.js`)
+  - `verifyExpenseAccess`: Validates expense access
+  - `verifyExpenseAdminAccess`: Admin-only expense actions
+  - `verifyExpenseSplitAccess`: Split payment validation
+
+#### Rate Limiting
+- **General API**: 100 requests/15 minutes
+- **Auth Endpoints**: 10 requests/hour
+- Custom error responses with rate limit headers
+
+#### Validation
+- **Request Validation** (`validation.js`)
+  - Joi schemas for all endpoints
+  - Custom validators for complex rules
+  - Sanitization of all inputs
+
+#### File Uploads (`upload.js`)
+- Image validation (JPEG, PNG, WebP)
+- 5MB file size limit
+- Secure filename generation
+- Virus scanning (stub)
 
 - **expensePermissions.js**: Functions like `verifyExpenseAccess`, `verifyExpenseAdminAccess`, `verifyExpenseSplitAccess`.
 - **groupPermissions.js**: Functions like `verifyGroupMembership`, `verifyGroupAdmin`.
@@ -185,6 +336,108 @@ This document provides an overview of the current state of the Roomy backend, th
 ## 5. Contact & Handover
 
 For questions or handover, please refer to the backend README or contact the current maintainer. All major architectural decisions are documented in `docs/ARCHITECTURE.md`.
+
+## 3. AI System Engineering Notes
+
+### AI Service
+- **Location:** `src/services/aiService.js`
+- **AI Model:** Google Gemini 2.0 Flash via `@google/genai`
+- **Key Features:**
+  - Natural language to task extraction
+  - Context-aware processing using group data
+  - Fallback system for AI unavailability
+  - Member mention extraction and assignment
+  - Confidence scoring for suggestions
+  - Multi-turn conversation support
+
+### AI Controller
+- **Location:** `src/controllers/v1/aiController.js`
+- **Endpoints:**
+  - `POST /ai/process-voice`: Process voice/text input
+  - `POST /ai/confirm-tasks`: Create tasks from AI suggestions
+  - `GET /ai/status`: Service health and model info
+  - `POST /ai/test`: Development testing (non-production only)
+- **Features:**
+  - Input validation and sanitization
+  - Group context integration
+  - Error handling and fallbacks
+  - Detailed response metadata
+
+### API Routes
+- **Location:** `src/routes/v1/ai.js`
+- **Security:**
+  - JWT authentication required
+  - Rate limiting
+  - Input validation
+- **Request/Response Formats:**
+  - JSON payloads
+  - Standardized error responses
+  - Rich metadata in responses
+
+### Testing
+- **Test Location:** `tests/services/ai.test.js`
+- **Test Coverage:**
+  - Task extraction accuracy
+  - Member mention detection
+  - Fallback system behavior
+  - Error conditions
+  - API endpoint validation
+
+### Environment Configuration
+- **Required Variables:**
+  - `GEMINI_API_KEY`: Google AI API key
+  - `AI_ENABLED`: Feature flag (default: true)
+  - `AI_MODEL`: Model version (default: gemini-2.0-flash-exp)
+
+### Integration Guidelines
+1. **Frontend Implementation:**
+   - Handle both success and error responses
+   - Display confidence scores to users
+   - Support for confirming/editing AI suggestions
+   - Loading states for AI processing
+
+2. **Error Handling:**
+   - Graceful degradation when AI is unavailable
+   - User-friendly error messages
+   - Retry mechanisms for transient failures
+
+## 4. Recommendations for Future Development
+
+### AI/ML Enhancements
+- [ ] Implement model fine-tuning with user feedback
+- [ ] Add support for additional languages
+- [ ] Improve context window for better conversation history
+- [ ] Add sentiment analysis for task prioritization
+
+### Performance Optimization
+- [ ] Implement response caching
+- [ ] Add request batching for bulk operations
+- [ ] Optimize token usage for cost efficiency
+
+### Security & Compliance
+- [ ] Add data anonymization for training
+- [ ] Implement usage quotas
+- [ ] Add audit logging for AI operations
+
+### User Experience
+- [ ] Add preview mode for AI-generated tasks
+- [ ] Implement undo/redo for AI actions
+- [ ] Add user feedback mechanism for AI suggestions
+
+## 5. Maintenance & Support
+
+### Monitoring
+- Track API usage and performance metrics
+- Monitor error rates and failure modes
+- Set up alerts for service degradation
+
+### Documentation
+- Keep API documentation up to date
+- Document known limitations and edge cases
+- Maintain example requests/responses
+
+### Contact
+For support or questions about the AI implementation, contact the backend team or refer to the internal wiki for additional resources.
 
 ---
 

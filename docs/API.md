@@ -437,26 +437,321 @@ Welcome to the Roomy API! This guide provides a comprehensive, code-accurate ove
 - Use the statistics endpoint for group financial dashboards and insights.
 - Allow users to upload receipts and view detailed expense breakdowns.
 
-### 6. Real-Time In-App Notifications (Not Yet Implemented)
+### 6. Real-Time In-App Notifications 
 
-- Endpoints and WebSocket stubs exist, but real-time notification delivery is not yet implemented.
-- Notification retrieval and mark-as-read endpoints may be present, but push/real-time logic is not functional.
+The notification system provides comprehensive real-time capabilities through WebSockets, with support for various event types and delivery methods.
+
+#### System Architecture
+
+```plaintext
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   AI Service    │    │  Task Service   │    │ Expense Service │
+│                 │    │                 │    │                 │
+└─────────┬───────┘    └─────────┬───────┘    └─────────┬───────┘
+          │                      │                      │
+          │ emits events         │ emits events         │ emits events
+          ▼                      ▼                      ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    Event Bus (EventEmitter)                     │
+└─────────────────────┬───────────────────────────────────────────┘
+                      │ listens to all events
+                      ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                  Notification Service                           │
+│  • Processes events into notifications                          │
+│  • Stores notifications in DB                                   │
+│  • Determines delivery methods                                  │
+└─────────────────────┬───────────────────────────────────────────┘
+                      │ triggers delivery
+                      ▼
+┌─────────────────┐              ┌─────────────────┐
+│  WebSocket      │              │ Push Notification│
+│  Service        │              │ Service (Future) │
+│  • Real-time    │              │ • FCM/APNs      │
+│  • In-app       │              │ • Email         │
+└─────────────────┘              └─────────────────┘
+```
+
+#### Core Features
+- **WebSocket Server**: Full-featured implementation using Socket.IO
+- **Authentication**: JWT-based secure connections
+- **Connection Management**: Handles user presence and group memberships
+- **Event Types**: Supports a wide range of system and application events
+- **Delivery Methods**: Both direct and group notifications
+
+#### Supported Event Types
+
+##### Task Events
+- `task.created` - New task created
+- `task.assigned` - Task assigned to user
+- `task.completed` - Task marked complete
+- `task.updated` - Task details updated
+- `task.deleted` - Task removed
+- `task.due_soon` - Task due date approaching
+- `task.overdue` - Task is past due
+- `task.reassigned` - Task reassigned to different user
+
+##### AI Events
+- `ai.tasks_suggested` - AI has generated task suggestions
+- `ai.tasks_confirmed` - User confirmed AI-suggested tasks
+- `ai.processing_started` - AI processing initiated
+- `ai.processing_completed` - AI processing finished
+- `ai.processing_failed` - Error in AI processing
+
+##### Expense Events
+- `expense.created` - New expense added
+- `expense.updated` - Expense details modified
+- `expense.deleted` - Expense removed
+- `expense.split_paid` - Split payment made
+- `expense.fully_settled` - Expense fully settled
+- `expense.splits_changed` - Expense splits modified
+- `expense.split_reset` - Splits reset to equal
+- `expense.custom_split_set` - Custom splits configured
+- `payment.reminder` - Payment reminder sent
+
+##### Group Events
+- `group.created` - New group created
+- `group.updated` - Group details modified
+- `group.member_joined` - New member joined group
+- `group.member_left` - Member left group
+- `group.member_removed` - Member removed from group
+- `group.admin_transferred` - Group admin changed
+- `group.role_changed` - Member role updated
+- `group.invite_code_regenerated` - New invite code generated
+- `group.email_invitation_sent` - Email invite sent
+
+#### API Endpoints
+
+##### Get Notifications
+```
+GET /notifications
+```
+**Query Parameters:**
+- `page` - Page number (default: 1)
+- `limit` - Items per page (default: 20, max: 50)
+- `unreadOnly` - Filter unread notifications
+- `type` - Filter by notification type
+- `groupId` - Filter by group
+- `priority` - Filter by priority level
+- `sortBy` - Field to sort by (default: createdAt)
+- `sortOrder` - Sort order (asc/desc, default: desc)
+
+##### Get Unread Count
+```
+GET /notifications/unread-count
+```
+**Query Parameters:**
+- `groupId` - Filter by group
+
+##### Mark as Read
+```
+PATCH /notifications/:notificationId/read
+```
+
+##### Mark All as Read
+```
+PATCH /notifications/mark-all-read
+```
+**Body:**
+```json
+{
+  "groupId": "optional_group_id"
+}
+```
+
+##### WebSocket Status
+```
+GET /notifications/websocket/status
+```
+
+##### Group Broadcast (Admin Only)
+```
+POST /notifications/broadcast
+```
+**Body:**
+```json
+{
+  "groupId": "required_group_id",
+  "message": "Broadcast message"
+}
+```
+
+#### WebSocket Events
+
+##### Server to Client
+- `notification:new` - New notification received
+- `task:created` - New task created
+- `task:completed` - Task marked complete
+- `expense:added` - New expense added
+- `ai:tasks_suggested` - AI task suggestions ready
+- `user:online` - User came online
+- `user:offline` - User went offline
+- `connection:status` - Connection status update
+
+##### Client to Server
+- `notification:read` - Mark notification as read
+- `notification:read_all` - Mark all notifications as read
 
 ### 7. Email Notifications
 
-- **Group Invites:** Send email invitations to join a group.
-- **Welcome Emails:** Automated welcome messages for new users.
-- **Role Changes:** Notify users of admin transfers or role updates.
-- **Payment Reminders:** Email reminders for unpaid expenses.
-- **Task Assignment, Completion, Due Soon, and Reassignment:** Email notifications for task events.
-- **Expense Events:** Email notifications for new expenses, split changes, split paid, and full settlement.
+The system supports various email notifications that are sent asynchronously for important events. These emails help keep users informed even when they're not actively using the application.
+
+#### Key Features
+- **Templated Emails**: Consistent branding and formatting
+- **Asynchronous Delivery**: Non-blocking email sending
+- **Preference Management**: Users can manage notification preferences
+- **Event-Based**: Triggered by specific system events
+
+#### Notification Types
+
+##### User Account
+- **Welcome Email**: Sent after successful registration
+  - Includes account verification link
+  - Provides app introduction and next steps
+
+- **Password Reset**: For account recovery  ( NEXT VERSION )
+  - Contains secure reset link
+  - Expires after a set duration
+
+- **Email Verification**: For new/changed email addresses ( NEXT VERSION )
+  - Includes verification link
+  - Required for account activation
+
+##### Group Management
+- **Group Invitation**: Invite to join a group
+  - Includes group details and invitation code
+  - Accept/decline options
+
+- **Group Invitation Reminder**: Follow-up for pending invites
+  - Sent after 24 hours if invite not accepted( NEXT VERSION )
+
+- **Group Role Change**: Notification of permission updates
+  - Sent when admin changes user roles
+  - Includes previous and new role information
+
+- **Group Admin Transfer**: Notification of ownership transfer
+  - Sent to both previous and new admins
+  - Includes transfer confirmation
+
+##### Task Management
+- **Task Assignment**: Notification of new task assignment
+  - Includes task details and due date
+  - Direct link to the task
+
+- **Task Due Soon**: Reminder for upcoming deadlines
+  - Configurable reminder window (24h by default)
+  - Sent to all task assignees
+
+- **Task Overdue**: Notification for missed deadlines
+  - Sent to task assignees and creator
+  - Includes overdue duration
+
+- **Task Update**: Notification of task changes
+  - Sent when important fields are modified
+  - Highlights what changed
+
+##### Expense Management
+- **Expense Added**: Notification of new expense
+  - Shows amount and split details
+  - Sent to all group members
+
+- **Expense Settlement**: Notification of payment received
+  - Confirms payment details
+  - Updates remaining balance
+
+- **Payment Reminder**: For unsettled expenses
+  - Sent to users with outstanding balances
+  - Includes payment instructions
+
+- **Expense Report**: Weekly summary of expenses
+  - Shows activity in all user's groups
+  - Includes balances and recent transactions( NEXT VERSION )
+
+##### System Notifications
+- **Security Alerts**: For suspicious activities ( NEXT VERSION )
+  - Failed login attempts
+  - Password changes
+  - New device logins
+
+- **Account Activity**: Important account events( NEXT VERSION )
+  - Profile changes
+  - Connected services updates
+  - Subscription status changes
+
+#### Email Preferences
+Users can manage their notification preferences through their account settings, including:
+- Global email notifications on/off
+- Per-category notification settings
+- Frequency of digest emails
+- Critical alerts (always on)
+
+#### Technical Implementation
+- Uses Nodemailer for email delivery
+- Supports multiple email providers (SMTP, SendGrid, etc.)
+- Implements rate limiting and retries
+- Tracks email delivery status
+- Supports HTML and plain-text versions
 
 ### 8. Admin & Security
 
-- **Role-Based Access:** Enforce permissions for sensitive actions (e.g., removing members, deleting expenses, managing splits).
-- **Middleware Enforcement:** All protected routes use middleware for authentication and authorization.
-- **Rate Limiting:** Prevent abuse of sensitive endpoints.
-- **Data Validation:** Strict validation for all incoming data to prevent errors and security issues.
+#### Authentication Middleware
+- **JWT Authentication**: All protected routes require a valid JWT token
+  - Token must be included in the `Authorization: Bearer <token>` header
+  - Validates token signature and expiration
+  - Verifies user account is active
+  - Checks token version to prevent use of revoked tokens
+
+#### Authorization Middleware
+
+##### Group Permissions
+- `verifyGroupMembership`: Verifies user is a member of the specified group
+  - Required for all group-specific operations
+  - Attaches group and user role to request object
+  
+- `verifyGroupAdmin`: Verifies user is an admin of the specified group
+  - Required for administrative actions (e.g., removing members, updating group settings)
+  - Inherits from verifyGroupMembership
+
+##### Expense Permissions
+- `verifyExpenseAccess`: Verifies user can manage an expense
+  - User must be either the expense payer or a group admin
+  - Validates expense and group status
+  
+- `verifyExpenseAdminAccess`: Verifies user is a group admin for expense operations
+  - Required for administrative expense actions
+  
+- `verifyExpenseSplitAccess`: Verifies user permissions for split operations
+  - Validates user can mark splits as paid
+
+#### Rate Limiting
+- **General API Endpoints**: 100 requests per 15 minutes per IP
+- **Authentication Endpoints**: 10 requests per hour per IP
+- Custom error responses with rate limit information in headers
+
+#### Input Validation
+- **Joi Schemas**: Request body validation for all endpoints
+- **Express-Validator**: Additional validation for complex scenarios
+- **File Uploads**:
+  - Image files only (JPEG, PNG, WebP)
+  - 5MB file size limit
+  - Secure filename generation
+
+#### Security Headers
+- **CORS**: Configured with allowed origins and methods
+- **Helmet**: Enabled for secure HTTP headers
+- **Content Security Policy**: Restricts resource loading
+
+#### Error Handling
+- Consistent error response format
+- Detailed validation error messages
+- Secure error messages in production
+- Request ID for tracking
+
+#### Data Protection
+- Password hashing with bcrypt
+- Sensitive data filtering in responses
+- NoSQL injection prevention
+- XSS protection
 
 ---
 
@@ -486,106 +781,6 @@ Welcome to the Roomy API! This guide provides a comprehensive, code-accurate ove
 4. Alice checks her owed amount using `/expenses/group/:groupId/my-owed`.
 5. Bob sends payment reminders to all unpaid members using `/expenses/group/:groupId/send-reminders`.
 
----
-
-## Base Configuration
-
-- **Base URL:** `http://localhost:3000/api/v1`
-- **Version:** 1.0
-- **Content-Type:** `application/json`
-- **Authorization:** `Bearer <JWT_TOKEN>` (required for protected endpoints)
-
----
-
-## Authentication Endpoints
-
-| Method | Endpoint                  | Description                | Request Body / Notes         |
-|--------|---------------------------|----------------------------|------------------------------|
-| POST   | /auth/register            | User account creation      | `{ email, password, name }`  |
-| POST   | /auth/login               | User authentication        | `{ email, password }`        |
-| POST   | /auth/refresh             | Token renewal              | `{ refreshToken }`           |
-| POST   | /auth/logout              | Logout (JWT required)      |                              |
-| GET    | /auth/profile             | User profile retrieval     | JWT required                 |
-| PATCH  | /auth/profile             | Profile update             | `{ name, avatar, ... }` (multipart/form-data for avatar) |
-| DELETE | /auth/profile/picture     | Delete profile picture     | JWT required                 |
-
----
-
-## Group Management Endpoints
-
-| Method | Endpoint                                   | Description                        | Request Body / Notes         |
-|--------|--------------------------------------------|------------------------------------|------------------------------|
-| GET    | /groups/                                   | List all groups (user is a member) | JWT required                 |
-| GET    | /groups/search                             | Search groups                      | JWT required, query params   |
-| GET    | /groups/my-groups                          | List groups the user belongs to    | JWT required                 |
-| POST   | /groups/                                   | Create group, assign admin         | `{ name, ... }`              |
-| POST   | /groups/join                               | Join group via invite code         | `{ inviteCode }`             |
-| GET    | /groups/:groupId                           | Get group info                     | JWT, group membership        |
-| GET    | /groups/:groupId/statistics                | Group statistics                   | JWT, group membership        |
-| POST   | /groups/:groupId/leave                     | Leave group                        | JWT, group membership        |
-| PATCH  | /groups/:groupId                           | Update group (admin only)          | `{ name, ... }`              |
-| POST   | /groups/:groupId/invite-email              | Send invite email (admin only)     | `{ email }`                  |
-| DELETE | /groups/:groupId/members/:userId           | Remove member (admin only)         |                              |
-| GET    | /groups/:groupId/members                   | List group members                 | JWT, group membership        |
-| PATCH  | /groups/:groupId/transfer-admin            | Transfer admin (admin only)        | `{ newAdminId }`             |
-| POST   | /groups/:groupId/regenerate-invite         | Regenerate invite code (admin only)|                              |
-
----
-
-## Task Management Endpoints
-
-| Method | Endpoint                                   | Description                        | Request Body / Notes         |
-|--------|--------------------------------------------|------------------------------------|------------------------------|
-| GET    | /tasks/my-tasks                            | List user’s personal tasks         | JWT required                 |
-| POST   | /tasks/                                    | Create a group task                | `{ title, description, ... }`|
-| GET    | /tasks/group/:groupId                      | List group tasks                   | JWT, group membership        |
-| GET    | /tasks/group/:groupId/statistics           | Group task statistics              | JWT, group membership        |
-| GET    | /tasks/:taskId                             | Get task details                   | JWT required                 |
-| PATCH  | /tasks/:taskId                             | Update task                        | `{ ... }`                    |
-| PATCH  | /tasks/:taskId/complete                    | Mark task complete                 | `{ ... }`                    |
-| DELETE | /tasks/:taskId                             | Delete task                        | JWT required                 |
-| POST   | /tasks/:taskId/notes                       | Add note to task                   | `{ note }`                   |
-
----
-
-## Expense Management Endpoints
-
-| Method | Endpoint                                   | Description                        | Request Body / Notes         |
-|--------|--------------------------------------------|------------------------------------|------------------------------|
-| POST   | /expenses/                                 | Create group expense               | `{ amount, description, ... }`|
-| POST   | /expenses/custom-splits                    | Create expense with custom splits  | `{ ... }`                    |
-| GET    | /expenses/group/:groupId                   | List group expenses                | JWT, group membership        |
-| GET    | /expenses/group/:groupId/unpaid            | List unpaid expenses               | JWT, group membership        |
-| GET    | /expenses/group/:groupId/my-owed           | Get user’s owed amount             | JWT, group membership        |
-| GET    | /expenses/group/:groupId/balances          | Get group balances                 | JWT, group membership        |
-| GET    | /expenses/group/:groupId/statistics        | Group expense statistics           | JWT, group membership        |
-| GET    | /expenses/:expenseId                       | Get expense details                | JWT required                 |
-| GET    | /expenses/:expenseId/summary               | Get expense summary                | JWT required                 |
-| PATCH  | /expenses/:expenseId                       | Update expense                     | `{ ... }`                    |
-| DELETE | /expenses/:expenseId                       | Delete expense                     | JWT required                 |
-| PATCH  | /expenses/:expenseId/splits/custom         | Set custom splits (admin only)     | `{ ... }`                    |
-| PATCH  | /expenses/:expenseId/splits/reset          | Reset to equal splits (admin only) |                              |
-| PATCH  | /expenses/:expenseId/splits/:memberId/pay  | Mark split as paid                 |                              |
-| POST   | /expenses/group/:groupId/send-reminders    | Send payment reminders             | JWT, group membership        |
-
----
-
-## AI Voice Processing Endpoints (Not Yet Implemented)
-
-| Method | Endpoint                  | Description                              | Request Body / Notes         |
-|--------|---------------------------|------------------------------------------|------------------------------|
-| POST   | /ai/process-voice         | Interpret natural language task input    | `{ audioData, text }`        |
-| POST   | /ai/confirm-tasks         | Confirm and create AI-suggested tasks    | `{ tasks: [...] }`           |
-
-**Note:** These endpoints exist but are not implemented in the backend.
-
----
-
-## Real-Time In-App Notification API (Not Yet Implemented)
-
-- REST and WebSocket endpoints for notifications are planned but not implemented in the backend.
-
----
 
 ## Permissions & Middleware
 

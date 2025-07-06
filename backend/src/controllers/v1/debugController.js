@@ -2,7 +2,9 @@ const Expense = require('../../models/Expense');
 const Group = require('../../models/Group');
 const responseHelper = require('../../utils/responseHelper');
 
+// A controller with debugging endpoints for analyzing application data and behavior.
 class DebugController {
+    // Analyzes a specific expense to validate its splits and payment status.
   async analyzeExpense(req, res, next) {
     try {
       const { expenseId } = req.params;
@@ -16,7 +18,7 @@ class DebugController {
         return responseHelper.notFound(res, 'Expense not found');
       }
 
-      // Analyze splits
+      // Performing a detailed analysis of the expense and its splits.
       const analysis = {
         expenseInfo: {
           id: expense._id,
@@ -49,6 +51,7 @@ class DebugController {
     }
   }
 
+    // Analyzes the financial balances for all members of a specific group.
   async analyzeBalances(req, res, next) {
     try {
       const { groupId } = req.params;

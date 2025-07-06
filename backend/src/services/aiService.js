@@ -1,14 +1,17 @@
+// Handles all interactions with Google Generative AI (Gemini) for task creation from voice/text.
 const { GoogleGenerativeAI } = require('@google/genai');
 const { EventTypes } = require('../utils/eventTypes')
+
 
 class AIService {
   constructor() {
     this.initializeAI();
   }
 
+  // Set up Google Generative AI client and model.
   initializeAI() {
     if (!process.env.GEMINI_API_KEY) {
-      console.warn('⚠️ GEMINI_API_KEY not found. AI features will be disabled.');
+      console.warn('GEMINI_API_KEY not found. AI features will be disabled.');
       this.isEnabled = false;
       return;
     }
@@ -25,16 +28,15 @@ class AIService {
         }
       });
       this.isEnabled = true;
-      console.log('✅ AI Service initialized with Gemini 2.0 Flash');
+      console.log('AI Service initialized with Gemini 2.0 Flash');
     } catch (error) {
-      console.error('❌ Failed to initialize AI Service:', error);
+      console.error('Failed to initialize AI Service:', error);
       this.isEnabled = false;
     }
   }
 
-  /**
-   * Enhanced processVoiceToTasks with event emission
-   */
+  // Main entry: process natural language text to extract tasks and emit events.
+
   async processVoiceToTasks(text, context = {}) {
     const startTime = Date.now();
     const { userId, groupId } = context;
@@ -73,7 +75,7 @@ class AIService {
       return result;
       
     } catch (error) {
-      console.error('❌ AI processing error:', error);
+      console.error('AI processing error:', error);
       
       // Emit error event
       eventBus.safeEmit('ai.processing_failed', {
@@ -87,8 +89,9 @@ class AIService {
     }
   }
 
+  // Core AI processing: build prompt, call model, parse response.
   async performAIProcessing(text, context){
-    if (this.isEnabled){
+    if (!this.isEnabled){
       throw new Error('AI service not available')
     }
 
@@ -121,8 +124,8 @@ class AIService {
         context.groupMembers || []
       );
 
-      const processingOne = Date.now() - startTime;
-      console.log(`✅ AI generated ${enhancedTasks.length} tasks in ${processingTime}ms`);
+      const processingTime = Date.now() - startTime;
+      console.log(`AI generated ${enhancedTasks.length} tasks in ${processingTime}ms`);
       
       return {
         originalText: text,
@@ -138,13 +141,13 @@ class AIService {
         }
       };
     } catch (error) {
-      console.error('❌ AI processing error:', error);
+      console.error('AI processing error:', error);
       // Return intelligent fallback
       return this.createFallbackResponse(text, context);
     }
   }
 
-  // Extract member mentions from text
+  // Extract member mentions from text.
   extractMemberMentions(text, groupMembers) {
     const mentions = [];
     const normalizedText = text.toLowerCase();
@@ -197,7 +200,7 @@ class AIService {
     };
   }
 
-  // Calculate how confident we are about a mention
+  // Calculate confidence score for a member mention.
   calculateMentionConfidence(pattern, text) {
     let confidence = 0.5; // Base confidence
     
@@ -211,7 +214,7 @@ class AIService {
     return Math.min(confidence, 1.0);
   }
 
-  // Build the AI prompt with smart assignment detection
+  // Build a detailed prompt for the AI model.
   buildSmartPrompt(text, context, memberInfo) {
     const { groupMembers = [], recentTasks = [] } = context;
     
@@ -303,7 +306,7 @@ Output: {
 Process the input and return ONLY the JSON:`;
   }
 
-  // Clean AI response and parse JSON
+  // Clean up AI response and extract JSON.
   cleanJsonResponse(responseText) {
     // Remove markdown formatting
     let cleaned = responseText.replace(/```json\s*/g, '').replace(/```\s*/g, '');
@@ -320,7 +323,7 @@ Process the input and return ONLY the JSON:`;
     return cleaned.trim();
   }
 
-  // Validate and enhance AI assignments
+  // Validate and enhance AI task assignments.
   validateAndEnhanceAssignments(tasks, memberInfo, groupMembers) {
     return tasks.map(task => {
       // Validate assigned member exists
@@ -351,7 +354,7 @@ Process the input and return ONLY the JSON:`;
     });
   }
 
-  // Try to infer assignment from task content and mentions
+  // Try to infer a task assignment from mentions.
   inferAssignmentFromTask(task, memberInfo) {
     const taskText = `${task.title} ${task.description}`.toLowerCase();
     
@@ -369,7 +372,7 @@ Process the input and return ONLY the JSON:`;
     return null;
   }
 
-  // Create intelligent fallback when AI fails
+  // Fallback: create keyword-based task suggestions if AI fails.
   createFallbackResponse(text, context = {}) {
     const memberInfo = this.extractMemberMentions(text, context.groupMembers || []);
     const keywords = text.toLowerCase();
@@ -476,6 +479,45 @@ Process the input and return ONLY the JSON:`;
       return { connected: false, error: error.message };
     }
   }
+  // Confirm and create tasks based on AI suggestions and emit event upon completion.
+ async confirmAndCreateTask(tasks, context = {}) {
+  const { userId, groupId, originalText } = context;
+  try {
+    const createdTasks = await this.createTasksInSystem(tasks, context);
+    // Emit event for confirmed AI tasks
+    eventBus.safeEmit(EventTypes.AI_TASKS_CONFIRMED, {
+      userId,
+      groupId,
+      tasks: createdTasks,
+      originalText,
+      timestamp: new Date()
+    });
+    return createdTasks;
+  } catch (error) {
+    logger.error('Task creation error:', error);
+    throw error;
+  }
+};
+
+  // Helper to create tasks in the system using taskService
+ async createTasksInSystem(tasks, context) {
+  const { userId } = context;
+  const results = [];
+  for (const taskData of tasks) {
+    try {
+      const created = await taskService.createTask(taskData, userId);
+      results.push(created);
+    } catch (err) {
+      results.push({ error: err.message, taskData });
+    }
+  }
+  return results;
+  };
 }
+
+
+
+
+
 
 module.exports = new AIService();

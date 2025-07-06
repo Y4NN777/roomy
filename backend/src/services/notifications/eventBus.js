@@ -1,6 +1,8 @@
+// This file implements a singleton event bus for decoupled, application-wide communication between services.
 // src/services/notifications/eventBus.js
 const EventEmitter = require('events');
 
+// EventBus extends Node's EventEmitter to provide a centralized pub-sub mechanism.
 class EventBus extends EventEmitter {
   constructor() {
     super();
@@ -8,6 +10,7 @@ class EventBus extends EventEmitter {
     this.setupEventLogging();
   }
 
+  // Overrides the default emit method to add logging for all dispatched events.
   setupEventLogging() {
     // Override emit to log all events (since onAny doesn't exist in built-in EventEmitter)
     const originalEmit = this.emit;
@@ -21,7 +24,7 @@ class EventBus extends EventEmitter {
     };
   }
 
-  // Enhanced emit with error handling
+  // Emits an event with integrated error handling to prevent crashes from listener exceptions.
   safeEmit(eventName, data) {
     try {
       this.emit(eventName, data);
@@ -32,14 +35,14 @@ class EventBus extends EventEmitter {
     }
   }
 
-  // Subscribe to multiple events with single handler
+  // Subscribes a single handler to multiple event types for convenience.
   onMultiple(events, handler) {
     events.forEach(event => {
       this.on(event, handler);
     });
   }
 
-  // One-time listener with timeout
+  // Listens for a single event occurrence with a timeout to prevent indefinite waiting.
   onceWithTimeout(eventName, timeout = 5000) {
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
@@ -56,7 +59,7 @@ class EventBus extends EventEmitter {
     });
   }
 
-  // Get listener count for monitoring
+  // Retrieves statistics about the event bus, including listener counts for each event.
   getStats() {
     const events = this.eventNames();
     const stats = {};
@@ -72,7 +75,7 @@ class EventBus extends EventEmitter {
     };
   }
 
-  // Graceful shutdown - THIS WAS MISSING!
+  // Removes all event listeners to ensure a clean shutdown and prevent memory leaks.
   cleanup() {
     this.removeAllListeners();
     console.log('🧹 EventBus cleaned up');

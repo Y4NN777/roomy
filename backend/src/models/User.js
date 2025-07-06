@@ -24,7 +24,7 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Password is required'],
     minLength: [8, 'Password must be at least 8 characters long'],
-    select: false, // Don't include password in queries by default
+    select: false, // The user's password, which is not included in query results by default.
   },
   profilePicture: {
     type: String,
@@ -95,19 +95,19 @@ const userSchema = new mongoose.Schema({
   },
   tokenVersion: {
     type: Number,
-    default: 1, // For refresh token revocation
+    default: 1, // A version number for JWT refresh tokens to enable revocation.
   },
 }, {
   timestamps: true,
 });
 
-// Index for performance
+// Defining indexes for improved query performance.
 userSchema.index({ groupId: 1 });
 userSchema.index({ isActive: 1 });
 
-// Hash password before saving
+// A pre-save middleware to hash the user's password before saving it to the database.
 userSchema.pre('save', async function(next) {
-  // Only hash password if it's modified
+  // Ensuring the password is only hashed if it has been modified.
   if (!this.isModified('password')) return next();
 
   try {
@@ -119,7 +119,7 @@ userSchema.pre('save', async function(next) {
   }
 });
 
-// Compare password method
+// A method to compare a candidate password with the user's hashed password.
 userSchema.methods.comparePassword = async function(candidatePassword) {
   try {
     return await bcrypt.compare(candidatePassword, this.password);
@@ -128,19 +128,19 @@ userSchema.methods.comparePassword = async function(candidatePassword) {
   }
 };
 
-// Update last login
+// A method to update the user's last login timestamp.
 userSchema.methods.updateLastLogin = function() {
   this.lastLoginAt = new Date();
   return this.save();
 };
 
-// Increment token version (for logout/revoke tokens)
+// A method to invalidate refresh tokens by incrementing the token version.
 userSchema.methods.revokeTokens = function() {
   this.tokenVersion += 1;
   return this.save();
 };
 
-// Transform output (remove sensitive fields)
+// A transformation method to remove sensitive fields from the user object when it is converted to JSON.
 userSchema.methods.toJSON = function() {
   const userObject = this.toObject();
   delete userObject.password;
@@ -149,7 +149,7 @@ userSchema.methods.toJSON = function() {
   return userObject;
 };
 
-// Static method to find user with password for authentication
+// A static method to find an active user by email and include the password for authentication purposes.
 userSchema.statics.findByEmailWithPassword = function(email) {
   return this.findOne({ email, isActive: true }).select('+password');
 };

@@ -2,7 +2,9 @@ const expenseService = require('../../services/expenseService');
 const responseHelper = require('../../utils/responseHelper');
 const logger = require('../../utils/logger');
 
+// A controller for managing expenses, including creation, retrieval, and settlement.
 class ExpenseController {
+    // Creates a new expense within a group.
   async createExpense(req, res, next) {
     try {
       const expense = await expenseService.createExpense(req.body, req.user.id);
@@ -21,6 +23,7 @@ class ExpenseController {
     }
   }
 
+    // Retrieves a list of expenses for the current group, with optional filters.
   async getExpenses(req, res, next) {
     try {
       const filters = {
@@ -32,7 +35,7 @@ class ExpenseController {
         endDate: req.query.endDate,
       };
 
-      // Remove undefined filters
+      // Removes any undefined filter values to prevent issues with the database query.
       Object.keys(filters).forEach(key => {
         if (filters[key] === undefined) delete filters[key];
       });
@@ -52,6 +55,7 @@ class ExpenseController {
     }
   }
 
+    // Retrieves a single expense by its ID.
   async getExpense(req, res, next) {
     try {
       const { expenseId } = req.params;
@@ -73,6 +77,7 @@ class ExpenseController {
     }
   }
 
+    // Updates an existing expense.
   async updateExpense(req, res, next) {
     try {
       const { expenseId } = req.params;
@@ -94,6 +99,7 @@ class ExpenseController {
     }
   }
 
+    // Deletes an expense.
   async deleteExpense(req, res, next) {
     try {
       const { expenseId } = req.params;
@@ -114,6 +120,7 @@ class ExpenseController {
     }
   }
 
+    // Marks a specific split of an expense as paid.
   async markSplitPaid(req, res, next) {
     try {
       const { expenseId, memberId } = req.params;
@@ -135,6 +142,7 @@ class ExpenseController {
     }
   }
 
+    // Retrieves the financial balances for all members of the current group.
   async getGroupBalances(req, res, next) {
     try {
       const result = await expenseService.getGroupBalances(req.group._id, req.user.id);
@@ -152,6 +160,7 @@ class ExpenseController {
     }
   }
 
+    // Retrieves enhanced financial balances, including debts and credits between members.
   async getEnhancedGroupBalances(req, res, next) {
     try {
         const result = await expenseService.getEnhancedGroupBalances(req.group._id, req.user.id);
@@ -166,6 +175,7 @@ class ExpenseController {
     }
   }
 
+    // Retrieves a detailed financial balance for a specific user in the group.
   async getDetailedUserBalance(req, res, next) {
     try {
         const { userId } = req.params;
@@ -188,6 +198,7 @@ class ExpenseController {
     }
   }
 
+    // Validates the integrity of all expenses in the group to ensure financial correctness.
   async validateExpenseIntegrity(req, res, next) {
     try {
         const result = await expenseService.validateExpenseIntegrity(req.group._id, req.user.id);

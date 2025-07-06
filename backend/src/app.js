@@ -12,20 +12,20 @@ const logger = require('./utils/logger');
 
 const app = express();
 const server = http.createServer(app);
-// Initialize WebSocket service with the HTTP server
-// This allows WebSocket connections to share the same server instance
+// Initializing the WebSocket service and attaching it to the HTTP server.
+// This setup enables WebSocket connections to use the same server instance.
 const io = webSocketService.initialize(server);
 
 
-// Trust proxy for accurate client IP
+// Configuring the 'trust proxy' setting to ensure accurate IP address identification behind a proxy.
 app.set('trust proxy', 1);
 
-// Security middleware
+// Applying essential security middleware to protect the application from common vulnerabilities.
 app.use(helmet({
   crossOriginEmbedderPolicy: false
 }));
 
-// CORS configuration
+// Configuring Cross-Origin Resource Sharing (CORS) to allow requests from authorized origins.
 const corsOptions = {
   origin: process.env.CORS_ORIGIN?.split(',') || ['http://localhost:3001'],
   credentials: true,
@@ -33,21 +33,21 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 
-// Logging middleware
+// Setting up request logging for monitoring and debugging purposes.
 if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
 } else {
   app.use(morgan('combined'));
 }
 
-// Static file serving for uploads
+// Serving static assets, such as uploaded files, from the 'uploads' directory.
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
-// Body parsing middleware
+// Adding middleware to parse incoming JSON and URL-encoded request bodies.
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// Health check endpoint
+// Defining a health check endpoint to monitor the application's status and availability.
 app.get('/health', (req, res) => {
 
   const wsStats = webSocketService.getConnectionStats();
@@ -60,10 +60,10 @@ app.get('/health', (req, res) => {
   });
 });
 
-// API routes
+// Mounting the main application routes under the '/api' prefix.
 app.use('/api', routes);
 
-// Handle 404 routes
+// Implementing a catch-all route to handle requests for non-existent endpoints, returning a 404 error.
 app.use('*', (req, res) => {
   res.status(404).json({
     success: false,
@@ -75,7 +75,7 @@ app.use('*', (req, res) => {
   });
 });
 
-// Global error handler (must be last)
+// Implementing the global error handler as the final middleware to catch and process all application errors.
 app.use(errorHandler);
 
 module.exports = {app, io};

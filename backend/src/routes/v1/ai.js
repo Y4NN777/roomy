@@ -6,7 +6,7 @@ const { body, query } = require('express-validator');
 const validation = require('../../middleware/validation');
 
 
-// AI input validation middleware
+// Defines validation rules for AI input, ensuring that the text is within a reasonable length and the group ID is valid.
 const validateAIInput = [
   body('text')
     .isString()
@@ -20,6 +20,7 @@ const validateAIInput = [
   validation.handleValidationErrors
 ];
 
+// Defines validation rules for confirming AI-suggested tasks, ensuring the data structure is correct.
 const validateTaskConfirmation = [
   body('tasks')
     .isArray({ min: 1, max: 10 })
@@ -52,14 +53,19 @@ const validateTaskConfirmation = [
   validation.handleValidationErrors
 ];
 
-// Main AI endpoints
-router.post('/process-voice', validateAIInput, aiController.processVoiceInput);
-router.post('/confirm-tasks', validateTaskConfirmation, aiController.confirmAndCreateTasks);
+// Defines the main AI endpoint for processing voice or text input.
+router.post('/process-voice', authenticateToken, validateAIInput, aiController.processVoiceInput);
 
-// Utility endpoints
+// Defines the endpoint for confirming and creating tasks from AI suggestions.
+router.post('/confirm-tasks', authenticateToken, validateTaskConfirmation, aiController.confirmAndCreateTasks);
+
+
+
+// Defines a utility endpoint to get the current status of the AI service.
 router.get('/status', aiController.getStatus);
 
-// Development/testing endpoints (non-production only)
+// Defines a development-only endpoint for testing the AI service.
+// This route is available only in non-production environments for testing purposes.
 if (process.env.NODE_ENV !== 'production') {
   router.post('/test', [
     body('testInput')
@@ -68,7 +74,7 @@ if (process.env.NODE_ENV !== 'production') {
       .isLength({ max: 500 })
       .withMessage('Test input must be under 500 characters'),
     validation.handleValidationErrors
-  ], aiController.testAI);
+  ], authenticateToken, aiController.testAI);
 }
 
 module.exports = router;

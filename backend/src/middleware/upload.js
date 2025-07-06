@@ -1,27 +1,28 @@
+// This file configures multer for handling file uploads, specifically for user profile pictures.
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const responseHelper = require('../utils/responseHelper');
 
-// Create uploads directory if it doesn't exist
+// Ensures the directory for profile picture uploads exists, creating it if it doesn't.
 const uploadsDir = path.join(__dirname, '../../uploads/profiles');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-// Configure multer for file storage
+// Configures multer to handle file storage on disk.
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, uploadsDir);
   },
   filename: (req, file, cb) => {
-    // Generate unique filename: userId_timestamp.extension
+    // Generates a unique filename using the user's ID and a timestamp to prevent naming conflicts and ensure traceability.
     const uniqueName = `${req.user.id}_${Date.now()}${path.extname(file.originalname)}`;
     cb(null, uniqueName);
   },
 });
 
-// File filter for images only
+// A file filter to ensure that only allowed image types are uploaded.
 const fileFilter = (req, file, cb) => {
   const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
   
@@ -32,16 +33,16 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
-// Configure multer
+// Initializes multer with the defined storage, file filter, and size limits.
 const upload = multer({
   storage,
   fileFilter,
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB limit
+    fileSize: 5 * 1024 * 1024, // Sets a 5MB file size limit.
   },
 });
 
-// Error handler for multer errors
+// A custom error handler specifically for multer-related upload errors.
 const handleUploadError = (err, req, res, next) => {
   if (err instanceof multer.MulterError) {
     if (err.code === 'LIMIT_FILE_SIZE') {
@@ -74,7 +75,7 @@ const handleUploadError = (err, req, res, next) => {
   next(err);
 };
 
-// Middleware to handle single profile picture upload
+// A middleware pipeline that first handles a single profile picture upload and then processes any resulting errors.
 const uploadProfilePicture = [
   upload.single('profilePicture'),
   handleUploadError,

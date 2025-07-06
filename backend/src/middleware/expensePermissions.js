@@ -4,7 +4,7 @@ const responseHelper = require('../utils/responseHelper');
 const CONSTANTS = require('../utils/constants');
 const logger = require('../utils/logger');
 
-// Verify user can manage expense (admin or payer)
+// Middleware to verify that the user has permission to manage an expense, either as a group admin or the original payer.
 const verifyExpenseAccess = async (req, res, next) => {
   try {
     const expenseId = req.params.expenseId;
@@ -14,25 +14,25 @@ const verifyExpenseAccess = async (req, res, next) => {
       return responseHelper.error(res, 'Expense ID is required', 400, 'MISSING_EXPENSE_ID');
     }
 
-    // Get expense with group info
+    // Retrieves the expense and populates its associated group information.
     const expense = await Expense.findById(expenseId).populate('groupId');
     if (!expense) {
       return responseHelper.notFound(res, 'Expense not found');
     }
 
-    // Get group with members
+    // Retrieves the group to verify its status and the user's membership.
     const group = await Group.findById(expense.groupId._id);
     if (!group || !group.isActive) {
       return responseHelper.notFound(res, 'Group not found');
     }
 
-    // Check if user is a group member
+    // Verifies that the authenticated user is a member of the group.
     const member = group.findMember(userId);
     if (!member) {
       return responseHelper.forbidden(res, 'Access denied - not a group member');
     }
 
-    // Check if user can manage this expense (admin or payer)
+    // Checks if the user has the necessary permissions (admin or payer) to manage the expense.
     const canManage = member.role === CONSTANTS.USER_ROLES.ADMIN || 
                      expense.payerId.toString() === userId;
 
@@ -40,7 +40,7 @@ const verifyExpenseAccess = async (req, res, next) => {
       return responseHelper.forbidden(res, 'Insufficient permissions to manage this expense');
     }
 
-    // Attach expense and group to request
+    // Attaches the expense, group, and user's role to the request object for use in subsequent middleware or controllers.
     req.expense = expense;
     req.group = group;
     req.userRole = member.role;
@@ -52,7 +52,7 @@ const verifyExpenseAccess = async (req, res, next) => {
   }
 };
 
-// Verify user is admin of the expense's group
+// Middleware to verify that the user is an admin of the group associated with the expense.
 const verifyExpenseAdminAccess = async (req, res, next) => {
   try {
     const expenseId = req.params.expenseId;
@@ -62,19 +62,19 @@ const verifyExpenseAdminAccess = async (req, res, next) => {
       return responseHelper.error(res, 'Expense ID is required', 400, 'MISSING_EXPENSE_ID');
     }
 
-    // Get expense with group info
+    // Retrieves the expense to identify its associated group.
     const expense = await Expense.findById(expenseId);
     if (!expense) {
       return responseHelper.notFound(res, 'Expense not found');
     }
 
-    // Get group with members
+    // Retrieves the group to verify its status and the user's membership.
     const group = await Group.findById(expense.groupId);
     if (!group || !group.isActive) {
       return responseHelper.notFound(res, 'Group not found');
     }
 
-    // Check if user is a group member and admin
+    // Verifies that the user is a member of the group and has an admin role.
     const member = group.findMember(userId);
     if (!member) {
       return responseHelper.forbidden(res, 'Access denied - not a group member');
@@ -84,7 +84,7 @@ const verifyExpenseAdminAccess = async (req, res, next) => {
       return responseHelper.forbidden(res, 'Admin privileges required');
     }
 
-    // Attach expense and group to request
+    // Attaches the expense, group, and user's role to the request object for use in subsequent middleware or controllers.
     req.expense = expense;
     req.group = group;
     req.userRole = member.role;
@@ -98,38 +98,39 @@ const verifyExpenseAdminAccess = async (req, res, next) => {
 };
 
 
+// Middleware to verify that the user has permission to mark an expense split as paid.
 const verifyExpenseSplitAccess = async (req, res, next) => {
   try {
     const expenseId = req.params.expenseId;
-    const memberId = req.params.memberId; // The member whose split we're marking as paid
+    const memberId = req.params.memberId; // The ID of the member whose split is being modified.
     const userId = req.user.id;
 
     if (!expenseId) {
       return responseHelper.error(res, 'Expense ID is required', 400, 'MISSING_EXPENSE_ID');
     }
 
-    // Get expense with group info
+    // Retrieves the expense and populates its associated group information.
     const expense = await Expense.findById(expenseId).populate('groupId');
     if (!expense) {
       return responseHelper.notFound(res, 'Expense not found');
     }
 
-    // Get group with members
+    // Retrieves the group to verify its status and the user's membership.
     const group = await Group.findById(expense.groupId._id);
     if (!group || !group.isActive) {
       return responseHelper.notFound(res, 'Group not found');
     }
 
-    // Check if user is a group member
+    // Verifies that the authenticated user is a member of the group.
     const member = group.findMember(userId);
     if (!member) {
       return responseHelper.forbidden(res, 'Access denied - not a group member');
     }
 
-    // Check permissions for marking split as paid:
-    // 1. Admin can mark anyone's split as paid
-    // 2. Expense payer can mark anyone's split as paid  
-    // 3. Any member can mark their own split as paid
+    // Defines the permissions for marking a split as paid:
+    // 1. Admins can mark any member's split as paid.
+    // 2. The expense payer can mark any member's split as paid.
+    // 3. Any member can mark their own split as paid.
     const isAdmin = member.role === CONSTANTS.USER_ROLES.ADMIN;
     const isPayer = expense.payerId.toString() === userId;
     const isMarkingOwnSplit = memberId === userId;
@@ -140,7 +141,7 @@ const verifyExpenseSplitAccess = async (req, res, next) => {
       return responseHelper.forbidden(res, 'You can only mark your own split as paid');
     }
 
-    // Attach expense and group to request
+    // Attaches the expense, group, and user's role to the request object for use in subsequent middleware or controllers.
     req.expense = expense;
     req.group = group;
     req.userRole = member.role;

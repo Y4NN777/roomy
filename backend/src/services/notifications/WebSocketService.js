@@ -1,3 +1,4 @@
+// This service manages all real-time communication via WebSockets, including authentication, room management, and event broadcasting.
 // src/services/notifications/WebSocketService.js
 const socketIo = require('socket.io');
 const jwt = require('jsonwebtoken');
@@ -5,6 +6,7 @@ const User = require('../../models/User');
 const eventBus = require('./eventBus');
 const { EventTypes } = require('../../utils/eventTypes');
 
+// WebSocketService handles all real-time bidirectional communication between the server and clients.
 class WebSocketService {
   constructor() {
     this.io = null;
@@ -13,6 +15,7 @@ class WebSocketService {
     this.groupRooms = new Map();     // groupId -> Set of userIds
   }
 
+  // Initializes the Socket.IO server, configures CORS, and sets up all necessary handlers and listeners.
   initialize(server) {
     this.io = socketIo(server, {
       cors: {
@@ -33,6 +36,7 @@ class WebSocketService {
     return this.io;
   }
 
+  // Configures the authentication middleware for Socket.IO to validate JWT tokens on connection.
   setupMiddleware() {
     // Authentication middleware
     this.io.use(async (socket, next) => {
@@ -60,6 +64,7 @@ class WebSocketService {
     });
   }
 
+  // Sets up the main connection handler that listens for new client connections.
   setupConnectionHandlers() {
     this.io.on('connection', (socket) => {
       this.handleConnection(socket);
@@ -67,6 +72,7 @@ class WebSocketService {
     });
   }
 
+  // Manages new client connections, including joining rooms and notifying other users of the new connection.
   handleConnection(socket) {
     const userId = socket.userId;
     const user = socket.user;
@@ -110,6 +116,7 @@ class WebSocketService {
     });
   }
 
+  // Sets up individual event handlers for a connected socket, such as notification interactions and error handling.
   setupSocketHandlers(socket) {
     const userId = socket.userId;
     
@@ -141,6 +148,7 @@ class WebSocketService {
     });
   }
 
+  // Handles client disconnections, cleaning up user and group mappings and notifying others.
   handleDisconnection(socket, reason) {
     const userId = socket.userId;
     const user = socket.user;
@@ -178,6 +186,7 @@ class WebSocketService {
     });
   }
 
+  // Subscribes to the application's event bus to broadcast real-time updates to connected clients.
   setupEventListeners() {
     // Listen to notification events from event bus
     eventBus.on('notification.created', (data) => {
@@ -206,7 +215,7 @@ class WebSocketService {
     });
   }
 
-  // Core delivery methods
+  // Sends an event to a specific user if they are currently connected.
   sendToUser(userId, event, data) {
     const socket = this.connectedUsers.get(userId.toString());
     if (socket) {
@@ -219,6 +228,7 @@ class WebSocketService {
     return false;
   }
 
+  // Broadcasts an event to all members of a group, with an option to exclude a specific user.
   broadcastToGroup(groupId, event, data, excludeUserId = null) {
     const room = `group:${groupId}`;
     if (excludeUserId) {
@@ -234,6 +244,7 @@ class WebSocketService {
     }
   }
 
+  // Delivers a notification to one or more specified recipients.
   deliverNotification(notification, recipients = null) {
     if (recipients) {
       // Send to specific recipients
@@ -246,6 +257,7 @@ class WebSocketService {
     }
   }
 
+  // Sends a connection status confirmation to a newly connected client.
   sendConnectionStatus(socket) {
     socket.emit('connection:status', {
       connected: true,
@@ -258,18 +270,22 @@ class WebSocketService {
   }
 
   // Utility methods
+  // Returns an array of currently connected user IDs.
   getConnectedUsers() {
     return Array.from(this.connectedUsers.keys());
   }
 
+  // Checks if a specific user is currently connected.
   isUserConnected(userId) {
     return this.connectedUsers.has(userId.toString());
   }
 
+  // Returns an array of connected members for a specific group.
   getGroupMembers(groupId) {
     return Array.from(this.groupRooms.get(groupId) || []);
   }
 
+  // Retrieves statistics about the current WebSocket connections.
   getConnectionStats() {
     return {
       totalConnections: this.connectedUsers.size,
@@ -284,7 +300,7 @@ class WebSocketService {
     };
   }
 
-  // Testing and development methods
+  // Broadcasts a test message to all connected clients for development and debugging purposes.
   testBroadcast(message) {
     if (this.io) {
       this.io.emit('test:broadcast', {
@@ -295,7 +311,7 @@ class WebSocketService {
     }
   }
 
-  // Cleanup method
+  // Gracefully shuts down the WebSocket server and cleans up all connection data.
   cleanup() {
     if (this.io) {
       this.io.close();

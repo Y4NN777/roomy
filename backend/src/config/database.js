@@ -3,12 +3,12 @@ const logger = require('../utils/logger');
 
 const connectDB = async () => {
   try {
-    // Remove deprecated options
+    // Establishing a connection to the MongoDB database using the provided URI.
     const conn = await mongoose.connect(process.env.MONGODB_URI);
 
     logger.info(`MongoDB Connected: ${conn.connection.host}`);
     
-    // Handle connection events
+    // Setting up event listeners to handle various database connection events.
     mongoose.connection.on('error', (err) => {
       logger.error('MongoDB connection error:', err);
     });
@@ -17,7 +17,7 @@ const connectDB = async () => {
       logger.warn('MongoDB disconnected');
     });
 
-    // Graceful shutdown
+    // Ensuring a graceful shutdown of the database connection when the application is terminated.
     process.on('SIGINT', async () => {
       await mongoose.connection.close();
       logger.info('MongoDB connection closed through app termination');

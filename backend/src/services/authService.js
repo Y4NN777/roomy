@@ -1,10 +1,13 @@
+// This service handles all authentication-related logic, including user registration, login, token management, and profile updates.
 const User = require('../models/User');
 const { generateAccessToken, generateRefreshToken } = require('../config/jwt');
 const logger = require('../utils/logger');
 const path = require('path');
 const fs = require('fs').promises;
 
+// AuthService encapsulates all logic for user authentication, authorization, and profile management.
 class AuthService {
+  // Registers a new user, checks for existing users, and generates access and refresh tokens.
   async registerUser(userData) {
     try {
       // Check if user already exists
@@ -47,6 +50,7 @@ class AuthService {
     }
   }
 
+  // Authenticates a user with their email and password, updates their last login time, and generates new tokens.
   async loginUser(email, password) {
     try {
       // Find user with password
@@ -93,6 +97,7 @@ class AuthService {
     }
   }
 
+  // Refreshes a user's access token using a valid refresh token.
   async refreshToken(refreshToken) {
     try {
       const { verifyRefreshToken } = require('../config/jwt');
@@ -129,6 +134,7 @@ class AuthService {
     }
   }
 
+  // Logs out a user by revoking their tokens, effectively invalidating their session.
   async logoutUser(userId) {
     try {
       const user = await User.findById(userId);
@@ -145,6 +151,7 @@ class AuthService {
     }
   }
 
+  // Retrieves a user's profile information, including their group details and role.
   async getUserProfile(userId) {
     try {
       const user = await User.findById(userId).populate({
@@ -179,6 +186,7 @@ class AuthService {
     }
   }
 
+  // Updates a user's profile information, including their name, preferences, and profile picture.
   async updateUserProfile(userId, updateData, profilePictureFile = null) {
     try {
       const user = await User.findById(userId);
@@ -220,6 +228,7 @@ class AuthService {
     }
   }
 
+  // Deletes a user's profile picture from the filesystem and database.
   async deleteProfilePicture(userId) {
     try {
       const user = await User.findById(userId);

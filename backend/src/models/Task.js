@@ -106,11 +106,11 @@ const taskSchema = new mongoose.Schema({
     default: null,
   },
   estimatedDuration: {
-    type: Number, // in minutes
+    type: Number, // The estimated duration of the task in minutes.
     default: null,
   },
   actualDuration: {
-    type: Number, // in minutes
+    type: Number, // The actual duration of the task in minutes.
     default: null,
   },
   notes: [{
@@ -129,52 +129,52 @@ const taskSchema = new mongoose.Schema({
   timestamps: true,
 });
 
-// Indexes for performance
+// Defining indexes for improved query performance.
 taskSchema.index({ groupId: 1, status: 1 });
 taskSchema.index({ assignedTo: 1, dueDate: 1 });
 taskSchema.index({ groupId: 1, createdAt: -1 });
 taskSchema.index({ dueDate: 1, status: 1 });
 
-// Virtual for overdue status
+// A virtual property to determine if the task is overdue.
 taskSchema.virtual('isOverdue').get(function() {
   return this.dueDate && 
          this.status !== CONSTANTS.TASK_STATUS.COMPLETED && 
          new Date() > this.dueDate;
 });
 
-// Virtual for days until due
+// A virtual property to calculate the number of days until the task is due.
 taskSchema.virtual('daysUntilDue').get(function() {
   if (!this.dueDate) return null;
   const diff = this.dueDate.getTime() - new Date().getTime();
   return Math.ceil(diff / (1000 * 3600 * 24));
 });
 
-// Method to check if user can edit task
+// A method to check if a user has permission to edit the task.
 taskSchema.methods.canEdit = function(userId, userRole) {
-  // Admin can edit any task
+  // Admins have universal edit permissions.
   if (userRole === CONSTANTS.USER_ROLES.ADMIN) return true;
   
-  // Creator can edit their own task
+  // The user who created the task is allowed to edit it.
   if (this.createdBy.toString() === userId) return true;
   
-  // Assignee can edit their assigned task
+  // The user assigned to the task is allowed to edit it.
   if (this.assignedTo && this.assignedTo.toString() === userId) return true;
   
   return false;
 };
 
-// Method to check if user can complete task
+// A method to check if a user has permission to complete the task.
 taskSchema.methods.canComplete = function(userId, userRole) {
-  // Admin can complete any task
+  // Admins have universal completion permissions.
   if (userRole === CONSTANTS.USER_ROLES.ADMIN) return true;
   
-  // Assignee can complete their task
+  // The user assigned to the task is allowed to complete it.
   if (this.assignedTo && this.assignedTo.toString() === userId) return true;
   
   return false;
 };
 
-// Method to mark task as completed
+// A method to mark the task as completed.
 taskSchema.methods.markCompleted = function(userId) {
   this.status = CONSTANTS.TASK_STATUS.COMPLETED;
   this.completedAt = new Date();
@@ -182,7 +182,7 @@ taskSchema.methods.markCompleted = function(userId) {
   return this;
 };
 
-// Method to add note
+// A method to add a note to the task.
 taskSchema.methods.addNote = function(content, authorId) {
   this.notes.push({
     content,
@@ -192,7 +192,7 @@ taskSchema.methods.addNote = function(content, authorId) {
   return this;
 };
 
-// Static method to get user's tasks
+// A static method to retrieve all tasks assigned to a specific user.
 taskSchema.statics.getUserTasks = function(userId, status = null) {
   const query = { assignedTo: userId };
   if (status) query.status = status;

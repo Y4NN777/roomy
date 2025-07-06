@@ -2,7 +2,9 @@ const groupService = require('../../services/groupService');
 const responseHelper = require('../../utils/responseHelper');
 const logger = require('../../utils/logger');
 
+// A controller for managing groups, including creation, membership, and administration.
 class GroupController {
+    // Creates a new group and assigns the current user as its administrator.
   async createGroup(req, res, next) {
     try {
       const group = await groupService.createGroup(req.body, req.user.id);
@@ -26,11 +28,12 @@ class GroupController {
     }
   }
 
+    // Allows a user to join an existing group using an invite code.
   async joinGroup(req, res, next) {
     try {
       const { inviteCode } = req.body;
       
-      // ADD the missing parameter (true = send welcome email)
+      // A welcome email will be sent to the user upon successfully joining the group.
       const group = await groupService.joinGroup(inviteCode, req.user.id, true);
       
       responseHelper.success(
@@ -62,6 +65,7 @@ class GroupController {
     }
   }
 
+    // Retrieves the details of a specific group.
   async getGroup(req, res, next) {
     try {
       const { groupId } = req.params;
@@ -83,6 +87,7 @@ class GroupController {
     }
   }
 
+    // Updates the details of a specific group.
   async updateGroup(req, res, next) {
     try {
       const { groupId } = req.params;
@@ -104,6 +109,7 @@ class GroupController {
     }
   }
 
+    // Removes a member from a group. Only administrators can perform this action.
   async removeMember(req, res, next) {
     try {
       const { groupId, userId } = req.params;
@@ -126,6 +132,7 @@ class GroupController {
     }
   }
 
+    // Transfers the administrator role to another member of the group.
   async transferAdmin(req, res, next) {
     try {
       const { groupId } = req.params;
@@ -148,6 +155,7 @@ class GroupController {
     }
   }
 
+    // Allows a user to leave their current group.
   async leaveGroup(req, res, next) {
     try {
       const { groupId } = req.params;
@@ -169,6 +177,7 @@ class GroupController {
     }
   }
 
+    // Regenerates the invite code for a group. Only administrators can perform this action.
   async regenerateInviteCode(req, res, next) {
     try {
       const { groupId } = req.params;
@@ -190,6 +199,7 @@ class GroupController {
     }
   }
 
+    // Retrieves statistics for a specific group, such as member count and task distribution.
   async getGroupStatistics(req, res, next) {
     try {
       const { groupId } = req.params;
@@ -236,11 +246,12 @@ class GroupController {
     try {
         const includeDetails = req.query.details === 'true';
         
-        // Use the group and role from middleware
-        const group = req.group; // Set by verifyGroupMembership middleware
-        const requestingUserRole = req.userRole; // Set by verifyGroupMembership middleware
+        // Using the group and role information from the middleware.
+        // The req.group and req.userRole properties are set by the verifyGroupMembership middleware.
+        const group = req.group;
+        const requestingUserRole = req.userRole;
         
-        // Populate member details
+        // Populating the member details.
         await group.populate({
         path: 'members.userId',
         select: includeDetails 
@@ -250,7 +261,7 @@ class GroupController {
 
         const isAdmin = requestingUserRole === 'admin';
 
-        // Transform members data
+        // Transforming the members' data for the response.
         const members = group.members.map(member => {
         const memberData = {
             userId: member.userId._id,
@@ -263,7 +274,7 @@ class GroupController {
                     (new Date() - new Date(member.userId.lastLoginAt)) < 15 * 60 * 1000 // 15 minutes
         };
 
-        // Add detailed info for admins or include details request
+        // Adding detailed information for admins or when details are requested.
         if (isAdmin || includeDetails) {
             memberData.lastLoginAt = member.userId.lastLoginAt;
             memberData.theme = member.userId.preferences?.theme;
@@ -279,7 +290,7 @@ class GroupController {
         totalMembers: members.length,
         maxMembers: group.settings.maxMembers,
         members: members.sort((a, b) => {
-            // Sort: admins first, then by join date
+            // Sorting the members: admins first, then by join date.
             if (a.role === 'admin' && b.role !== 'admin') return -1;
             if (a.role !== 'admin' && b.role === 'admin') return 1;
             return new Date(a.joinedAt) - new Date(b.joinedAt);
@@ -376,8 +387,6 @@ class GroupController {
       next(error);
     }
   }
-
-  // Add this method to the existing GroupController class:
 
   async sendEmailInvitation(req, res, next) {
     try {

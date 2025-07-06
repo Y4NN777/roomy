@@ -2,7 +2,9 @@ const authService = require('../../services/authService');
 const responseHelper = require('../../utils/responseHelper');
 const logger = require('../../utils/logger');
 
+// A controller to handle user authentication, registration, and profile management.
 class AuthController {
+    // Handles the registration of a new user.
   async register(req, res, next) {
     try {
       const result = await authService.registerUser(req.body);
@@ -26,6 +28,7 @@ class AuthController {
     }
   }
 
+    // Handles user login and token generation.
   async login(req, res, next) {
     try {
       const { email, password } = req.body;
@@ -44,6 +47,7 @@ class AuthController {
     }
   }
 
+    // Refreshes the user's access token using a valid refresh token.
   async refreshToken(req, res, next) {
     try {
       const authHeader = req.headers.authorization;
@@ -68,6 +72,7 @@ class AuthController {
     }
   }
 
+    // Handles user logout by invalidating their refresh token.
   async logout(req, res, next) {
     try {
       await authService.logoutUser(req.user.id);
@@ -81,6 +86,7 @@ class AuthController {
     }
   }
 
+    // Retrieves the profile of the currently authenticated user.
   async getProfile(req, res, next) {
     try {
       const profile = await authService.getUserProfile(req.user.id);
@@ -98,6 +104,7 @@ class AuthController {
     }
   }
 
+    // Updates the profile of the currently authenticated user.
   async updateProfile(req, res, next) {
     try {
       const updatedUser = await authService.updateUserProfile(
@@ -119,6 +126,7 @@ class AuthController {
     }
   }
 
+    // Deletes the profile picture of the currently authenticated user.
   async deleteProfilePicture(req, res, next) {
     try {
       const updatedUser = await authService.deleteProfilePicture(req.user.id);

@@ -1,6 +1,9 @@
+// This file defines validation middleware and Joi schemas for request body validation.
 const Joi = require('joi');
 const responseHelper = require('../utils/responseHelper');
+const { validationResult } = require('express-validator');
 
+// A middleware factory that creates a validation middleware for a given Joi schema.
 const validate = (schema) => {
   return (req, res, next) => {
     const { error } = schema.validate(req.body, { abortEarly: false });
@@ -19,7 +22,7 @@ const validate = (schema) => {
 };
 
 
-// Add this method to handle express-validator errors (used in AI routes)
+// A middleware to handle validation errors from express-validator, primarily used in AI-related routes.
 const handleValidationErrors = (req, res, next) => {
   const errors = validationResult(req);
   
@@ -36,7 +39,7 @@ const handleValidationErrors = (req, res, next) => {
   next();
 };
 
-// Validation schemas
+// --- Authentication Schemas ---
 const authSchemas = {
   register: Joi.object({
     name: Joi.string()
@@ -104,6 +107,7 @@ const authSchemas = {
   }),
 };
 
+// --- Group Schemas ---
 const groupSchemas = {
   createGroup: Joi.object({
     name: Joi.string()
@@ -139,7 +143,7 @@ const groupSchemas = {
       }),
   }),
 
-  // Add to groupSchemas:
+  
   sendEmailInvitation: Joi.object({
     email: Joi.string()
         .email()
@@ -205,6 +209,7 @@ const groupSchemas = {
   })
 };
 
+// --- Task Schemas ---
 const taskSchemas = {
   createTask: Joi.object({
     groupId: Joi.string()
@@ -331,6 +336,7 @@ const taskSchemas = {
   }),
 };
 
+// --- Expense Schemas ---
 const expenseSchemas = {
   createExpense: Joi.object({
     groupId: Joi.string()

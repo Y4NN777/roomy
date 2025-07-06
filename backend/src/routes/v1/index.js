@@ -9,14 +9,14 @@ const { authenticateToken } = require('../../middleware/auth');
 
 const router = express.Router();
 
-// Mount route modules
+// Mounts the various route modules for version 1 of the API.
 router.use('/auth', authRoutes);
 router.use('/groups', groupRoutes);
 router.use('/tasks', taskRoutes);
 router.use('/expenses', expenseRoutes);
 router.use('/ai', aiRoutes);
 
-// Debug routes (only in development)
+// Defines debug routes that are only available in the development environment.
 if (process.env.NODE_ENV === 'development') {
   router.get('/debug/expense/:expenseId', authenticateToken, debugController.analyzeExpense);
   router.get('/debug/balances/:groupId', authenticateToken, debugController.analyzeBalances);

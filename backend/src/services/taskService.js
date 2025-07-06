@@ -9,10 +9,11 @@ const { EventTypes } = require('../utils/eventTypes');
 
 class TaskService {
   constructor() {
-    // Keep notification service for email calls
+    // Notification service instance
     this.notificationService = null;
   }
 
+  // Lazy-load notification service
   getNotificationService() {
     if (!this.notificationService) {
       this.notificationService = notificationService;
@@ -20,6 +21,7 @@ class TaskService {
     return this.notificationService;
   }
 
+  // Create a new task and emit notifications
   async createTask(taskData, creatorId) {
     try {
       // Verify group membership
@@ -28,14 +30,14 @@ class TaskService {
         throw new Error('Access denied - not a group member');
       }
 
-      // Verify assignee is group member (if assigned)
+      // Check assignee is group member
       if (taskData.assignedTo) {
         if (!group.isMember(taskData.assignedTo)) {
           throw new Error('Cannot assign task to non-group member');
         }
       }
 
-      // Create task
+      // Create and save task
       const task = new Task({
         ...taskData,
         createdBy: creatorId,
@@ -50,7 +52,7 @@ class TaskService {
         { path: 'groupId', select: 'name _id'}
       ]);
 
-      // 📧 DIRECT EMAIL CALL (keep this for reliable emails!)
+      // Notify assignee by email if needed
       if (task.assignedTo && task.assignedTo._id.toString() !== creatorId) {
         try {
           await notificationService.notifyTaskAssignment(
@@ -67,11 +69,11 @@ class TaskService {
             }
           );
         } catch (notificationError) {
-          logger.warn('❌ Task assignment email failed:', notificationError);
+          logger.warn('Task assignment email failed:', notificationError);
         }
       }
 
-      // 📱 EVENT EMISSION for in-app + WebSocket
+      // Emit event for new task
       eventBus.safeEmit(EventTypes.TASK_CREATED, {
         task,
         assignedUser: task.assignedTo,
@@ -92,6 +94,7 @@ class TaskService {
     }
   }
 
+  // Update a task
   async updateTask(taskId, updateData, requestingUserId) {
     try {
       const task = await Task.findById(taskId);
@@ -99,7 +102,7 @@ class TaskService {
         throw new Error('Task not found');
       }
 
-      // Store original values for change tracking
+      // Store original values
       const originalValues = {
         assignedTo: task.assignedTo?.toString(),
         title: task.title,
@@ -119,12 +122,12 @@ class TaskService {
 
       const userRole = group.findMember(requestingUserId).role;
 
-      // Check if user can edit task
+      // Check edit permissions
       if (!task.canEdit(requestingUserId, userRole)) {
         throw new Error('Insufficient permissions to edit this task');
       }
 
-      // Verify assignee is group member (if changing assignment)
+      // Check new assignee is group member
       if (updateData.assignedTo && updateData.assignedTo !== task.assignedTo?.toString()) {
         if (!group.isMember(updateData.assignedTo)) {
           throw new Error('Cannot assign task to non-group member');
@@ -134,7 +137,7 @@ class TaskService {
       const isReassignment = updateData.assignedTo && 
                           updateData.assignedTo !== originalValues.assignedTo;
 
-      // Update task
+      // Update task fields
       Object.assign(task, updateData);
       await task.save();
 
@@ -146,13 +149,13 @@ class TaskService {
         { path: 'groupId', select: 'name' }
       ]);
 
-      // Get user who made the update
+      // Get updater user
       const updater = await User.findById(requestingUserId).select('name');
 
-      // 📧 DIRECT EMAIL CALLS for important updates
+      // Notify users by email if needed
       try {
         if (isReassignment && task.assignedTo) {
-          // Notify new assignee about reassignment
+          // Notify new assignee
           await notificationService.notifyTaskReassignment({
             newAssigneeEmail: task.assignedTo.email,
             newAssigneeName: task.assignedTo.name,
@@ -163,7 +166,7 @@ class TaskService {
             priority: task.priority
           });
         } else if (task.assignedTo && requestingUserId !== task.assignedTo._id.toString()) {
-          // Notify assignee about other updates (if not updating their own task)
+          // Notify assignee about update
           const changes = {};
           
           if (updateData.title && updateData.title !== originalValues.title) {
@@ -191,10 +194,10 @@ class TaskService {
           }
         }
       } catch (notificationError) {
-        logger.warn('❌ Task update email failed:', notificationError);
+        logger.warn('Task update email failed:', notificationError);
       }
 
-      // 📱 EVENT EMISSION for in-app + WebSocket
+      // Emit event for task update
       eventBus.safeEmit(EventTypes.TASK_UPDATED, {
         originalTask: originalValues,
         updatedTask: task,
@@ -214,6 +217,7 @@ class TaskService {
     }
   }
 
+  // Complete a task
   async completeTask(taskId, requestingUserId, actualDuration = null) {
     try {
       const task = await Task.findById(taskId);
@@ -229,12 +233,12 @@ class TaskService {
 
       const userRole = group.findMember(requestingUserId).role;
 
-      // Check if user can complete task
+      // Check complete permissions
       if (!task.canComplete(requestingUserId, userRole)) {
         throw new Error('Insufficient permissions to complete this task');
       }
 
-      // Mark as completed
+      // Update task as completed
       task.markCompleted(requestingUserId);
       if (actualDuration) {
         task.actualDuration = actualDuration;
@@ -250,7 +254,7 @@ class TaskService {
         { path: 'groupId', select: 'name' }
       ]);
 
-      // 📧 DIRECT EMAIL CALL for task completion
+      // Notify users by email if needed
       if (task.createdBy._id.toString() !== requestingUserId) {
         try {
           await notificationService.notifyTaskCompletion({
@@ -287,6 +291,7 @@ class TaskService {
     }
   }
 
+  // Delete a task
   async deleteTask(taskId, requestingUserId) {
     try {
       const task = await Task.findById(taskId);
@@ -302,13 +307,13 @@ class TaskService {
 
       const userRole = group.findMember(requestingUserId).role;
 
-      // Check permissions (admin or creator can delete)
+      // Check delete permissions
       if (userRole !== CONSTANTS.USER_ROLES.ADMIN && 
           task.createdBy.toString() !== requestingUserId) {
         throw new Error('Insufficient permissions to delete this task');
       }
 
-      // Store task data before deletion
+      // Store task data
       const taskData = {
         _id: task._id,
         title: task.title,
@@ -319,7 +324,7 @@ class TaskService {
 
       await Task.findByIdAndDelete(taskId);
 
-      // 📱 EVENT EMISSION for in-app + WebSocket (no email needed for deletion)
+      // Emit event for task deletion
       eventBus.safeEmit(EventTypes.TASK_DELETED, {
         task: taskData,
         deletedBy: requestingUserId,
@@ -338,6 +343,7 @@ class TaskService {
     }
   }
 
+  // Get all tasks for a group
   async getTasks(groupId, filters = {}, requestingUserId) {
     try {
       // Verify group membership
@@ -359,6 +365,7 @@ class TaskService {
     }
   }
 
+  // Get a single task
   async getTask(taskId, requestingUserId) {
     try {
       const task = await Task.findById(taskId)
@@ -385,6 +392,7 @@ class TaskService {
     }
   }
 
+  // Add a note to a task
   async addTaskNote(taskId, content, authorId) {
     try {
       const task = await Task.findById(taskId);
@@ -402,7 +410,7 @@ class TaskService {
       task.addNote(content, authorId);
       await task.save();
 
-      // Populate the new note
+      // Populate note author
       await task.populate('notes.author', 'name email profilePicture');
 
       logger.info(`Note added to task ${taskId} by user ${authorId}`);
@@ -413,6 +421,7 @@ class TaskService {
     }
   }
 
+  // Get all tasks for a user
   async getUserTasks(userId, status = null) {
     try {
       const tasks = await Task.getUserTasks(userId, status);
@@ -423,6 +432,7 @@ class TaskService {
     }
   }
 
+  // Get statistics for a group
   async getTaskStatistics(groupId, requestingUserId) {
     try {
       // Verify group membership
@@ -473,7 +483,7 @@ class TaskService {
         overdueTasks: 0,
       };
 
-      // Add completion rate
+      // Calculate completion rate
       result.completionRate = result.totalTasks > 0 
         ? (result.completedTasks / result.totalTasks * 100).toFixed(1)
         : 0;
@@ -485,6 +495,7 @@ class TaskService {
     }
   }
 
+  // Update group statistics cache
   async updateGroupTaskStatistics(groupId) {
     try {
       const group = await Group.findById(groupId);

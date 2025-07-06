@@ -3,7 +3,7 @@ const responseHelper = require('../utils/responseHelper');
 const CONSTANTS = require('../utils/constants');
 const logger = require('../utils/logger');
 
-// Verify user is a member of the group (admin or regular member)
+// Middleware to verify that the authenticated user is a member of the specified group.
 const verifyGroupMembership = async (req, res, next) => {
   try {
     const groupId = req.params.groupId || req.body.groupId;
@@ -23,7 +23,7 @@ const verifyGroupMembership = async (req, res, next) => {
       return responseHelper.forbidden(res, 'Access denied - not a group member');
     }
 
-    // Attach group and user role to request
+    // Attaches the group, user's role, and member information to the request object for use in subsequent middleware or controllers.
     req.group = group;
     req.userRole = member.role;
     req.memberInfo = member;
@@ -35,14 +35,14 @@ const verifyGroupMembership = async (req, res, next) => {
   }
 };
 
-// Verify user is an admin of the group
+// Middleware to verify that the authenticated user is an admin of the specified group.
 const verifyGroupAdmin = async (req, res, next) => {
   try {
-    // First verify membership
+    // First, verifies that the user is a member of the group.
     await verifyGroupMembership(req, res, (err) => {
       if (err) return next(err);
 
-      // Then check admin role
+      // Then, checks if the user has an admin role.
       if (req.userRole !== CONSTANTS.USER_ROLES.ADMIN) {
         return responseHelper.forbidden(res, 'Admin privileges required');
       }
@@ -55,36 +55,36 @@ const verifyGroupAdmin = async (req, res, next) => {
   }
 };
 
-// Optional group membership check (for endpoints that work with or without group context)
+// Middleware for optional group membership, allowing access to endpoints that behave differently for group members and non-members.
 const optionalGroupMembership = async (req, res, next) => {
   try {
     const groupId = req.params.groupId || req.body.groupId;
     
     if (!groupId) {
-      return next(); // Continue without group context
+      return next(); // If no group ID is provided, continues the request flow without group context.
     }
 
-    // If group ID is provided, verify membership
+    // If a group ID is provided, proceeds with standard membership verification.
     return verifyGroupMembership(req, res, next);
   } catch (error) {
     logger.error('Optional group membership error:', error);
-    return next(); // Continue without group context on error
+    return next(); // On error, continues the request flow without group context.
   }
 };
 
-// Check if user can perform action on resource (admin or resource owner)
+// Middleware factory to create a middleware that verifies if a user can perform an action on a resource, checking for admin role or resource ownership.
 const verifyResourceAccess = (resourceOwnerField = 'createdBy') => {
   return (req, res, next) => {
     try {
       const userId = req.user.id;
       const userRole = req.userRole;
       
-      // Admin can access any resource
+      // Admins are granted access to any resource within the group.
       if (userRole === CONSTANTS.USER_ROLES.ADMIN) {
         return next();
       }
 
-      // Check if user owns the resource
+      // Checks if the user is the owner of the resource.
       const resourceOwnerId = req.body[resourceOwnerField] || 
                              req.params[resourceOwnerField] ||
                              (req.resource && req.resource[resourceOwnerField]);

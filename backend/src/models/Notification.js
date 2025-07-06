@@ -42,7 +42,7 @@ const notificationSchema = new mongoose.Schema({
     required: true,
     maxlength: 500
   },
-// Snoozing functionality
+// Fields for snoozing notifications.
   isSnoozed: {
     type: Boolean,
     default: false,
@@ -58,7 +58,7 @@ const notificationSchema = new mongoose.Schema({
     default: 0
   },
 
-  // Batching functionality
+  // Fields for batching similar notifications together.
   isBatched: {
     type: Boolean,
     default: false
@@ -76,7 +76,7 @@ const notificationSchema = new mongoose.Schema({
     ref: 'Notification'
   },
 
-  // Enhanced delivery tracking
+  // Fields for tracking the delivery status of notifications.
   deliveryAttempts: {
     type: Number,
     default: 0
@@ -85,7 +85,7 @@ const notificationSchema = new mongoose.Schema({
     type: Date
   },
 
-  // User interaction tracking
+  // Fields for tracking user interactions with notifications.
   clickedAt: {
     type: Date
   },
@@ -93,9 +93,9 @@ const notificationSchema = new mongoose.Schema({
     type: Date
   },
 
-  // Enhanced data field with more structure
+  // A structured data field to hold additional information related to the notification.
   data: {
-    // Existing fields...
+    // Core data fields for identifying actors and related entities.
     actorId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User'
@@ -117,7 +117,7 @@ const notificationSchema = new mongoose.Schema({
     },
     actionUrl: String,
     
-    // NEW FIELDS:
+    // Additional data fields for new notification types.
     broadcastType: String,
     isDirect: Boolean,
     taskCount: Number,
@@ -165,7 +165,7 @@ const notificationSchema = new mongoose.Schema({
   },
   expiresAt: {
     type: Date,
-    default: () => new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+    default: () => new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // Notifications will expire after 30 days.
     index: { expireAfterSeconds: 0 }
   }
 }, {
@@ -173,7 +173,7 @@ const notificationSchema = new mongoose.Schema({
   versionKey: false
 });
 
-// Compound indexes for efficient queries
+// Defining compound indexes for more efficient querying of notifications.
 notificationSchema.index({ recipientId: 1, isRead: 1 });
 notificationSchema.index({ recipientId: 1, groupId: 1 });
 notificationSchema.index({ recipientId: 1, createdAt: -1 });
@@ -183,7 +183,7 @@ notificationSchema.index({ recipientId: 1, isBatched: 1 });
 notificationSchema.index({ recipientId: 1, clickedAt: 1 });
 
 
-// Pre-save middleware to set readAt if isRead is true
+// A pre-save middleware to automatically set the 'readAt' timestamp when a notification is marked as read.
 notificationSchema.pre('save', function(next) {
   if (this.isModified('isRead') && this.isRead && !this.readAt) {
     this.readAt = new Date();
@@ -191,7 +191,7 @@ notificationSchema.pre('save', function(next) {
   next();
 });
 
-// Instance methods
+// --- Instance Methods ---
 notificationSchema.methods.markAsRead = function() {
   this.isRead = true;
   this.readAt = new Date();

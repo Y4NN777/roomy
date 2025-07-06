@@ -1,3 +1,5 @@
+// This file serves as a central hub for all Mongoose models, making them easily accessible throughout the application.
+
 const User = require('./User');
 const Group = require('./Group');
 const Task = require('./Task');

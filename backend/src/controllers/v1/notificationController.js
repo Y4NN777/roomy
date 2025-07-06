@@ -1,5 +1,4 @@
-// src/controllers/v1/notificationController.js
-// COMPLETE NOTIFICATION CONTROLLER - Following Service → Controller → Routes pattern
+// Implements the notification controller, following the standard service -> controller -> routes pattern.
 
 const notificationService = require('../../services/notifications/notificationService');
 const webSocketService = require('../../services/notifications/WebSocketService');
@@ -7,12 +6,12 @@ const eventBus = require('../../services/notifications/eventBus');
 const responseHelper = require('../../utils/responseHelper');
 const { EventTypes, NotificationTypes } = require('../../utils/eventTypes');
 
+// A controller for managing notifications, user preferences, and real-time updates.
 class NotificationController {
   
-  // =====================================
-  // BASIC NOTIFICATION OPERATIONS
-  // =====================================
+  // --- Basic Notification Operations ---
   
+    // Retrieves a paginated list of notifications for the authenticated user, with optional filters.
   async getNotifications(req, res) {
     try {
       const userId = req.user.id;
@@ -44,6 +43,7 @@ class NotificationController {
     }
   }
   
+    // Retrieves the number of unread notifications for the authenticated user.
   async getUnreadCount(req, res) {
     try {
       const userId = req.user.id;
@@ -62,6 +62,7 @@ class NotificationController {
     }
   }
   
+    // Marks a single notification as read.
   async markAsRead(req, res) {
     try {
       const { notificationId } = req.params;
@@ -85,6 +86,7 @@ class NotificationController {
     }
   }
   
+    // Marks all notifications as read for the authenticated user, with optional filters.
   async markAllAsRead(req, res) {
     try {
       const userId = req.user.id;
@@ -103,10 +105,9 @@ class NotificationController {
     }
   }
 
-  // =====================================
-  // ADVANCED NOTIFICATION OPERATIONS
-  // =====================================
+  // --- Advanced Notification Operations ---
 
+    // Deletes a single notification.
   async deleteNotification(req, res) {
     try {
       const { notificationId } = req.params;
@@ -124,6 +125,7 @@ class NotificationController {
     }
   }
 
+    // Retrieves notification statistics for the authenticated user over a specified timeframe.
   async getNotificationStats(req, res) {
     try {
       const userId = req.user.id;
@@ -137,6 +139,7 @@ class NotificationController {
     }
   }
 
+    // Retrieves notifications of a specific type for the authenticated user.
   async getNotificationsByType(req, res) {
     try {
       const userId = req.user.id;
@@ -158,10 +161,9 @@ class NotificationController {
     }
   }
 
-  // =====================================
-  // NOTIFICATION PREFERENCES
-  // =====================================
+  // --- Notification Preferences ---
 
+    // Retrieves the notification preferences for the authenticated user.
   async getNotificationPreferences(req, res) {
     try {
       const userId = req.user.id;
@@ -174,6 +176,7 @@ class NotificationController {
     }
   }
 
+    // Updates the notification preferences for the authenticated user.
   async updateNotificationPreferences(req, res) {
     try {
       const userId = req.user.id;
@@ -187,10 +190,9 @@ class NotificationController {
     }
   }
 
-  // =====================================
-  // REAL-TIME WEBSOCKET OPERATIONS
-  // =====================================
+  // --- Real-Time WebSocket Operations ---
 
+    // Retrieves the current status of the WebSocket service and the user's connection.
   async getWebSocketStatus(req, res) {
     try {
       const userId = req.user.id;
@@ -206,14 +208,13 @@ class NotificationController {
     }
   }
 
+    // Broadcasts a message to all members of a specific group.
   async broadcastToGroup(req, res) {
     try {
       const { groupId, message, type = 'SYSTEM_ANNOUNCEMENT' } = req.body;
       const userId = req.user.id;
       
-      // Check if user has permission to broadcast to group
-      // Add your group permission check here
-      
+
       const notification = await notificationService.createGroupBroadcast({
         groupId,
         message,
@@ -231,6 +232,7 @@ class NotificationController {
     }
   }
 
+    // Sends a direct notification from the authenticated user to another user.
   async sendDirectNotification(req, res) {
     try {
       const { recipientId, title, message, type = 'DIRECT_MESSAGE', priority = 'medium' } = req.body;
@@ -255,10 +257,9 @@ class NotificationController {
     }
   }
 
-  // =====================================
-  // TESTING AND DEBUGGING
-  // =====================================
+  // --- Testing and Debugging ---
 
+    // Sends a test notification to the authenticated user for debugging purposes.
   async testNotification(req, res) {
     try {
       if (process.env.NODE_ENV === 'production') {
@@ -295,6 +296,7 @@ class NotificationController {
     }
   }
 
+    // Emits a test event for debugging the event bus and its listeners.
   async testEventEmission(req, res) {
     try {
       if (process.env.NODE_ENV === 'production') {
@@ -308,7 +310,7 @@ class NotificationController {
         return responseHelper.error(res, 'Invalid event type', 400);
       }
       
-      // Emit test event
+      // Emits a test event to the event bus.
       eventBus.emit(eventType, {
         ...eventData,
         testEvent: true,
@@ -326,13 +328,12 @@ class NotificationController {
     }
   }
 
-  // =====================================
-  // SYSTEM MONITORING
-  // =====================================
+  // --- System Monitoring ---
 
+    // Retrieves system-wide statistics for notifications, WebSockets, and the event bus.
   async getSystemStats(req, res) {
     try {
-      // Only allow admins or in development
+      // This is a privileged operation, restricted to administrators in production.
       if (process.env.NODE_ENV === 'production' && req.user.role !== 'admin') {
         return responseHelper.error(res, 'Insufficient permissions', 403);
       }
@@ -352,10 +353,9 @@ class NotificationController {
     }
   }
 
-  // =====================================
-  // BULK OPERATIONS
-  // =====================================
+  // --- Bulk Operations ---
 
+    // Marks multiple notifications as read in a single bulk operation.
   async bulkMarkAsRead(req, res) {
     try {
       const userId = req.user.id;
@@ -377,6 +377,7 @@ class NotificationController {
     }
   }
 
+    // Deletes multiple notifications in a single bulk operation, either by ID or by age.
   async bulkDelete(req, res) {
     try {
       const userId = req.user.id;

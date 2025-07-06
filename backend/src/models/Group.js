@@ -79,12 +79,12 @@ const groupSchema = new mongoose.Schema({
   timestamps: true,
 });
 
-// Indexes for performance
+// Defining indexes for improved query performance.
 groupSchema.index({unique: true });
 groupSchema.index({ 'members.userId': 1 });
 groupSchema.index({ isActive: 1 });
 
-// Generate unique invite code
+// A static method to generate a unique invite code for the group.
 groupSchema.statics.generateInviteCode = async function() {
   const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let attempts = 0;
@@ -96,7 +96,7 @@ groupSchema.statics.generateInviteCode = async function() {
       code += characters.charAt(Math.floor(Math.random() * characters.length));
     }
 
-    // Check if code already exists
+    // Checking if the generated code already exists in the database.
     const existingGroup = await this.findOne({ inviteCode: code });
     if (!existingGroup) {
       return code;
@@ -108,32 +108,32 @@ groupSchema.statics.generateInviteCode = async function() {
   throw new Error('Unable to generate unique invite code');
 };
 
-// Find member by user ID
+// A method to find a member within the group by their user ID.
 groupSchema.methods.findMember = function(userId) {
   return this.members.find(member => 
     member.userId.toString() === userId.toString()
   );
 };
 
-// Check if user is admin
+// A method to check if a user has admin privileges in the group.
 groupSchema.methods.isAdmin = function(userId) {
   const member = this.findMember(userId);
   return member && member.role === CONSTANTS.USER_ROLES.ADMIN;
 };
 
-// Check if user is member (admin or regular member)
+// A method to check if a user is a member of the group, regardless of their role.
 groupSchema.methods.isMember = function(userId) {
   return !!this.findMember(userId);
 };
 
-// Add member to group
+// A method to add a new member to the group.
 groupSchema.methods.addMember = function(userId, role = CONSTANTS.USER_ROLES.MEMBER) {
-  // Check if user is already a member
+  // Preventing a user from being added to the group if they are already a member.
   if (this.isMember(userId)) {
     throw new Error('User is already a member of this group');
   }
 
-  // Check group capacity
+  // Ensuring the group has not reached its maximum member capacity.
   if (this.members.length >= this.settings.maxMembers) {
     throw new Error('Group has reached maximum capacity');
   }
@@ -147,7 +147,7 @@ groupSchema.methods.addMember = function(userId, role = CONSTANTS.USER_ROLES.MEM
   return this;
 };
 
-// Remove member from group
+// A method to remove a member from the group.
 groupSchema.methods.removeMember = function(userId) {
   const memberIndex = this.members.findIndex(member => 
     member.userId.toString() === userId.toString()
@@ -159,7 +159,7 @@ groupSchema.methods.removeMember = function(userId) {
 
   const member = this.members[memberIndex];
   
-  // Prevent removing the last admin
+  // Preventing the last admin from being removed to avoid orphaning the group.
   const adminCount = this.members.filter(m => m.role === CONSTANTS.USER_ROLES.ADMIN).length;
   if (member.role === CONSTANTS.USER_ROLES.ADMIN && adminCount === 1) {
     throw new Error('Cannot remove the last admin. Transfer admin role first.');
@@ -169,7 +169,7 @@ groupSchema.methods.removeMember = function(userId) {
   return this;
 };
 
-// Transfer admin role
+// A method to transfer the admin role from one member to another.
 groupSchema.methods.transferAdmin = function(currentAdminId, newAdminId) {
   const currentAdmin = this.findMember(currentAdminId);
   const newAdmin = this.findMember(newAdminId);
@@ -182,19 +182,19 @@ groupSchema.methods.transferAdmin = function(currentAdminId, newAdminId) {
     throw new Error('New admin is not a member of this group');
   }
 
-  // Transfer roles
+  // Performing the role transfer between the current and new admin.
   currentAdmin.role = CONSTANTS.USER_ROLES.MEMBER;
   newAdmin.role = CONSTANTS.USER_ROLES.ADMIN;
 
   return this;
 };
 
-// Update statistics
+// A method to update the group's statistics, such as task and expense counts.
 groupSchema.methods.updateStatistics = async function() {
   const Task = mongoose.model('Task');
   const Expense = mongoose.model('Expense');
 
-  // Count tasks
+  // Counting the total and completed tasks for the group.
   const totalTasks = await Task.countDocuments({ groupId: this._id });
   const completedTasks = await Task.countDocuments({ 
     groupId: this._id, 

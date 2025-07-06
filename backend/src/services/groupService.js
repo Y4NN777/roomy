@@ -1,13 +1,16 @@
+// This service handles all group-related logic, including creation, membership management, and administrative tasks.
 const Group = require('../models/Group');
 const User = require('../models/User');
 const logger = require('../utils/logger');
 const CONSTANTS = require('../utils/constants');
 
+// GroupService encapsulates all business logic for managing groups, members, and group-related actions.
 class GroupService {
     constructor() {
     this.notificationService = null;
   }
 
+  // Lazily loads and returns the notification service to avoid circular dependencies.
   getNotificationService() {
     if (!this.notificationService) {
       this.notificationService = require('./notificationService');
@@ -15,6 +18,7 @@ class GroupService {
     return this.notificationService;
   }
   
+  // Creates a new group, sets the creator as the admin, and associates the group with the user.
   async createGroup(groupData, creatorId) {
     try {
       // Check if user is already in a group
@@ -52,6 +56,7 @@ class GroupService {
     }
   }
 
+  // Allows a user to join an existing group using an invite code and sends a welcome notification.
   async joinGroup(inviteCode, userId, shouldSendWelcomeEmail = true) {
     try {
       // Check if user is already in a group
@@ -105,6 +110,7 @@ class GroupService {
     }
   }
 
+  // Retrieves the details of a specific group, ensuring the requesting user is a member.
   async getGroup(groupId, requestingUserId) {
     try {
       const group = await Group.findById(groupId);
@@ -125,6 +131,7 @@ class GroupService {
     }
   }
 
+  // Updates a group's information, requiring admin privileges for the requesting user.
   async updateGroup(groupId, updateData, requestingUserId) {
     try {
       const group = await Group.findById(groupId);
@@ -156,6 +163,7 @@ class GroupService {
     }
   }
 
+  // Removes a member from a group, an action that can only be performed by a group admin.
   async removeMember(groupId, memberToRemoveId, requestingUserId) {
     try {
       const group = await Group.findById(groupId);
@@ -190,6 +198,7 @@ class GroupService {
     }
   }
 
+  // Transfers the admin role to another member of the group and notifies the new admin.
   async transferAdmin(groupId, newAdminId, currentAdminId, shouldNotify = true) {
   try {
       const group = await Group.findById(groupId).populate('members.userId', 'name email');
@@ -232,6 +241,7 @@ class GroupService {
   }
   }
 
+  // Allows a user to leave a group, with checks to prevent the last admin from leaving.
   async leaveGroup(groupId, userId) {
     try {
       const group = await Group.findById(groupId);
@@ -267,6 +277,7 @@ class GroupService {
     }
   }
 
+  // Regenerates the invite code for a group, an action restricted to group admins.
   async regenerateInviteCode(groupId, requestingUserId) {
     try {
       const group = await Group.findById(groupId);
@@ -296,6 +307,7 @@ class GroupService {
     }
   }
 
+  // Retrieves and updates the statistics for a specific group.
   async getGroupStatistics(groupId, requestingUserId) {
     try {
       const group = await Group.findById(groupId);
@@ -320,6 +332,7 @@ class GroupService {
   }
 
 
+  // Retrieves a list of all active groups, with support for filtering and pagination.
   async getAllGroups(requestingUserId, filters = {}) {
     try {
       // This could be admin-only or public discovery feature
@@ -368,6 +381,7 @@ class GroupService {
 
 
 
+// Sends an email invitation to a prospective member to join the group.
 async sendEmailInvitation(groupId, recipientEmail, requestingUserId, customMessage = '') {
   try {
     const group = await Group.findById(groupId).populate('members.userId', 'name email');

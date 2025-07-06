@@ -51,26 +51,12 @@ class AIController {
     }
   }
   
-  // Confirms and creates tasks based on AI suggestions and emits an event upon completion.
+  // Confirms and creates tasks based on AI suggestions using the AI service.
   async confirmAndCreateTasks(tasks, context = {}) {
-    const { userId, groupId, originalText } = context;
-    
     try {
-      // TODO: The 'createTasksInSystem' method is not defined in this class.
-      // Creates the tasks in the system using the dedicated task service.
-      const createdTasks = await this.createTasksInSystem(tasks, context);
-      
-      // Emits an event to notify other parts of the system that AI-generated tasks have been confirmed.
-      eventBus.safeEmit(EventTypes.AI_TASKS_CONFIRMED, {
-        userId,
-        groupId,
-        tasks: createdTasks,
-        originalText,
-        timestamp: new Date()
-      });
-      
+      // Delegate orchestration to aiService
+      const createdTasks = await aiService.confirmAndCreateTask(tasks, context);
       return createdTasks;
-      
     } catch (error) {
       console.error('Task creation error:', error);
       throw error;

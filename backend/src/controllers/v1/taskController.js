@@ -1,8 +1,14 @@
 const taskService = require('../../services/taskService');
+const aiService = require('../../services/aiService');
+const Group = require('../../models/Group');
+const Task = require('../../models/Task');
 const responseHelper = require('../../utils/responseHelper');
 const logger = require('../../utils/logger');
+const groupContextService = require('../../services/groupContextService');
 
+// A controller for managing tasks, including creation, assignment, and completion.
 class TaskController {
+    // Creates a new task and, if applicable, provides AI-generated suggestions for related tasks.
   async createTask(req, res, next) {
     try {
       const task = await taskService.createTask(req.body, req.user.id);
@@ -10,13 +16,13 @@ class TaskController {
 
       if (task.description && task.description.length > 20 && aiService.isAvailable()) {
         try {
-          const groupContext = await this.getGroupContext(task.groupId, req.user.id);
+          const groupContext = await groupContextService.getGroupContext(task.groupId, req.user.id);
           const suggestions = await aiService.processVoiceToTasks(
             `Related to: ${task.title} - ${task.description}`, 
             groupContext
           );
           
-          // Include suggestions in response (limited to 3)
+          // Includes up to 3 AI-generated task suggestions in the response.
           const limitedSuggestions = suggestions.suggestedTasks.slice(0, 3);
           
           return responseHelper.success(res, {
@@ -24,7 +30,8 @@ class TaskController {
             aiSuggestions: limitedSuggestions.length > 0 ? limitedSuggestions : undefined
           }, 'Task created successfully');
         } catch (aiError) {
-          console.log('AI suggestions failed, continuing without them:', aiError.message);
+          // If AI suggestions fail, log the error and continue without them.
+          logger.warn('AI suggestions failed, but the task was created successfully.', { error: aiError.message });
         }
       }
       
@@ -46,33 +53,7 @@ class TaskController {
   }
 
 
-  async getGroupContext(groupId, userId) {
-    try {
-      const [groupMembers, recentTasks] = await Promise.all([
-        // Your existing method to get group members
-        Group.findById(groupId).populate('members.userId', 'name'),
-        // Your existing method to get recent tasks
-        Task.find({ groupId }).sort({ createdAt: -1 }).limit(10)
-      ]);
-      
-      return {
-        groupMembers: groupMembers.members.map(member => ({
-          id: member.userId._id,
-          name: member.userId.name,
-          role: member.role
-        })),
-        recentTasks: recentTasks.map(task => ({
-          title: task.title,
-          category: task.category,
-          status: task.status
-        }))
-      };
-    } catch (error) {
-      return { groupMembers: [], recentTasks: [] };
-    }
-  }
-
-
+  // Retrieves a list of tasks for the current group, with optional filters.
   async getTasks(req, res, next) {
     try {
       const filters = {
@@ -82,7 +63,7 @@ class TaskController {
         priority: req.query.priority,
       };
 
-      // Remove undefined filters
+      // Removes any undefined filter values to prevent issues with the database query.
       Object.keys(filters).forEach(key => {
         if (filters[key] === undefined) delete filters[key];
       });
@@ -102,6 +83,7 @@ class TaskController {
     }
   }
 
+    // Retrieves a single task by its ID.
   async getTask(req, res, next) {
     try {
       const { taskId } = req.params;
@@ -123,6 +105,7 @@ class TaskController {
     }
   }
 
+    // Updates an existing task.
   async updateTask(req, res, next) {
     try {
       const { taskId } = req.params;
@@ -147,6 +130,7 @@ class TaskController {
     }
   }
 
+    // Marks a task as complete and records its actual duration.
   async completeTask(req, res, next) {
     try {
       const { taskId } = req.params;
@@ -170,6 +154,7 @@ class TaskController {
     }
   }
 
+    // Deletes a task.
   async deleteTask(req, res, next) {
     try {
       const { taskId } = req.params;
@@ -190,6 +175,7 @@ class TaskController {
     }
   }
 
+    // Adds a note to a specific task.
   async addTaskNote(req, res, next) {
     try {
       const { taskId } = req.params;
@@ -213,6 +199,7 @@ class TaskController {
     }
   }
 
+    // Retrieves all tasks assigned to the currently authenticated user.
   async getUserTasks(req, res, next) {
     try {
       const { status } = req.query;
@@ -228,6 +215,7 @@ class TaskController {
     }
   }
 
+    // Retrieves statistics for tasks within the current group.
   async getTaskStatistics(req, res, next) {
     try {
       const statistics = await taskService.getTaskStatistics(req.group._id, req.user.id);

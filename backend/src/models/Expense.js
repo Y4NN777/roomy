@@ -97,33 +97,29 @@ const expenseSchema = new mongoose.Schema({
 expenseSchema.methods.calculateEqualSplits = function(groupMembers) {
   const splitAmount = this.amount / groupMembers.length;
   
-  console.log('🔍 DEBUG - calculateEqualSplits:');
-  console.log('  - Expense amount:', this.amount);
-  console.log('  - Group members:', groupMembers.length);
-  console.log('  - Split amount each:', splitAmount);
-  console.log('  - Payer ID:', this.payerId.toString());
+  
   
   this.splits = groupMembers.map(member => {
-    // Get the member ID correctly
+    // Retrieving the member ID, which may be nested.
     const memberId = member.userId ? member.userId._id || member.userId : member._id;
     const memberIdString = memberId.toString();
     const payerIdString = this.payerId.toString();
     
-    // Check if this member is the payer
+    // Checking if the current member is the one who paid for the expense.
     const isPayer = memberIdString === payerIdString;
     
-    console.log(`  - Member ${memberIdString}: isPayer = ${isPayer}`);
+    
     
     return {
       memberId: memberId,
       amount: parseFloat(splitAmount.toFixed(2)),
       percentage: parseFloat((100 / groupMembers.length).toFixed(2)),
-      paid: isPayer,  // ✅ FIXED: Simple boolean check
+      paid: isPayer,  // The payer's split is marked as paid by default.
       paidAt: isPayer ? new Date() : null,
     };
   });
   
-  // Handle rounding by adjusting the payer's split
+  // Adjusting the payer's split to account for any rounding discrepancies.
   const calculatedTotal = this.splits.reduce((sum, split) => sum + split.amount, 0);
   const difference = this.amount - calculatedTotal;
   
@@ -133,28 +129,24 @@ expenseSchema.methods.calculateEqualSplits = function(groupMembers) {
     );
     if (payerSplit) {
       payerSplit.amount += difference;
-      console.log(`  - Adjusted payer split by ${difference} to ${payerSplit.amount}`);
+      
     }
   }
   
-  console.log('  - Final splits:', this.splits.map(s => ({
-    memberId: s.memberId.toString(),
-    amount: s.amount,
-    paid: s.paid
-  })));
+  
   
   return this;
 };
 
 
 expenseSchema.methods.setCustomSplits = function(customSplits) {
-  // customSplits: [{ memberId, percentage }] or [{ memberId, amount }]
+  // The customSplits parameter can be an array of objects, each with either a percentage or a fixed amount.
   
   if (!customSplits || !Array.isArray(customSplits)) {
     throw new Error('Custom splits must be an array');
   }
 
-  // Validate that splits cover all members
+  // Validating that the custom splits provided include all members of the group.
   const memberIds = this.splits.map(split => split.memberId.toString());
   const customMemberIds = customSplits.map(split => split.memberId.toString());
   
@@ -163,29 +155,29 @@ expenseSchema.methods.setCustomSplits = function(customSplits) {
     throw new Error('Custom splits must include all group members');
   }
 
-  // Set split type
+  // Determining the split type based on whether percentages or custom amounts were provided.
   this.splitType = customSplits[0].percentage !== undefined ? 
     CONSTANTS.EXPENSE_SPLIT_TYPE.PERCENTAGE : 
     CONSTANTS.EXPENSE_SPLIT_TYPE.CUSTOM;
 
   if (this.splitType === CONSTANTS.EXPENSE_SPLIT_TYPE.PERCENTAGE) {
-    // Validate percentages add up to 100
+    // Validating that the provided percentages sum up to 100.
     const totalPercentage = customSplits.reduce((sum, split) => sum + split.percentage, 0);
     if (Math.abs(totalPercentage - 100) > 0.01) {
       throw new Error('Percentages must add up to 100%');
     }
 
-    // Calculate amounts based on percentages
+    // Calculating the split amounts based on the provided percentages.
     customSplits.forEach(customSplit => {
       const split = this.splits.find(s => s.memberId.toString() === customSplit.memberId.toString());
       if (split) {
         split.percentage = customSplit.percentage;
         split.amount = parseFloat(((this.amount * customSplit.percentage) / 100).toFixed(2));
-        // Keep existing paid status
+        // The existing paid status of each split is preserved.
       }
     });
   } else {
-    // Custom amounts
+    // Handling custom split amounts.
     const totalAmount = customSplits.reduce((sum, split) => sum + split.amount, 0);
     if (Math.abs(totalAmount - this.amount) > 0.01) {
       throw new Error('Custom amounts must add up to total expense amount');
@@ -196,7 +188,7 @@ expenseSchema.methods.setCustomSplits = function(customSplits) {
       if (split) {
         split.amount = parseFloat(customSplit.amount.toFixed(2));
         split.percentage = parseFloat(((customSplit.amount / this.amount) * 100).toFixed(2));
-        // Keep existing paid status
+        // The existing paid status of each split is preserved.
       }
     });
   }
@@ -204,7 +196,7 @@ expenseSchema.methods.setCustomSplits = function(customSplits) {
   return this;
 };
 
-// Method to reset to equal splits
+// A method to reset the expense splits to be divided equally among all members.
 expenseSchema.methods.resetToEqualSplits = function(groupMembers) {
   this.splitType = CONSTANTS.EXPENSE_SPLIT_TYPE.EQUAL;
   return this.calculateEqualSplits(groupMembers);
@@ -220,12 +212,12 @@ expenseSchema.methods.markSplitPaid = function(memberId, paidBy = null) {
     split.paid = true;
     split.paidAt = new Date();
     
-    // Check if all splits are now paid
+    // Checking if all splits have been paid to determine if the expense is fully settled.
     const allPaid = this.splits.every(split => split.paid);
     if (allPaid && !this.isSettled) {
       this.isSettled = true;
       this.settledAt = new Date();
-      console.log(`✅ Expense fully settled: ${this.description}`);
+      
     }
   }
   
@@ -257,9 +249,9 @@ expenseSchema.virtual('settlementStatus').get(function() {
 
 // ENHANCE getSummary method:
 expenseSchema.methods.getSummary = function() {
-  const totalOwed = this.totalOwed; // Use virtual
+  const totalOwed = this.totalOwed; // Using a virtual property to get the total owed amount.
   const totalPaid = this.splits.filter(split => split.paid).reduce((sum, split) => sum + split.amount, 0);
-  const totalOutstanding = this.totalOutstanding; // Use virtual
+  const totalOutstanding = this.totalOutstanding; // Using a virtual property to get the total owed amount.
   
   return {
     totalAmount: this.amount,
@@ -271,7 +263,7 @@ expenseSchema.methods.getSummary = function() {
     settlementStatus: this.settlementStatus,
     paidMembers: this.splits.filter(split => split.paid).length,
     totalMembers: this.splits.length,
-    // Add validation check
+    // Adding a validation check to ensure the calculated totals are correct.
     mathCheck: {
       splitsAddUp: Math.abs(totalOwed - this.amount) < 0.01,
       settlementCorrect: totalOutstanding === 0 ? this.isSettled : true
@@ -279,7 +271,7 @@ expenseSchema.methods.getSummary = function() {
   };
 };
 
-// Method to get member balance in this expense
+// A method to calculate a specific member's balance for this expense.
 expenseSchema.methods.getMemberBalance = function(memberId) {
   const split = this.splits.find(split => 
     split.memberId.toString() === memberId.toString()
@@ -287,19 +279,19 @@ expenseSchema.methods.getMemberBalance = function(memberId) {
   
   if (!split) return 0;
   
-  // If this member paid the expense, they're owed money
+  // If the member is the payer, their balance reflects the amount others owe them.
   if (this.payerId.toString() === memberId.toString()) {
     const othersOwe = this.splits
       .filter(split => split.memberId.toString() !== memberId.toString())
       .reduce((total, split) => total + (split.paid ? 0 : split.amount), 0);
-    return othersOwe; // Positive = owed money
+    return othersOwe; // A positive balance indicates that the member is owed money.
   }
   
-  // If this member didn't pay, they owe money (negative balance)
+  // If the member is not the payer, their balance reflects the amount they owe.
   return split.paid ? 0 : -split.amount;
 };
 
-// Static method to get group expenses with filters
+// A static method to retrieve all expenses for a group, with optional filters.
 expenseSchema.statics.getGroupExpenses = function(groupId, filters = {}) {
   const query = { groupId };
   
@@ -319,7 +311,7 @@ expenseSchema.statics.getGroupExpenses = function(groupId, filters = {}) {
     .sort({ date: -1 });
 };
 
-// Enhanced method to get detailed balance explanation
+// An enhanced method to provide a detailed breakdown of a user's balance within a group.
 expenseSchema.statics.getDetailedBalanceExplanation = async function(groupId, userId) {
   const expenses = await this.find({ groupId })
     .populate('payerId', 'name')
@@ -378,26 +370,26 @@ expenseSchema.statics.getDetailedBalanceExplanation = async function(groupId, us
 };
 // CORRECTED calculateGroupBalances static method
 expenseSchema.statics.calculateGroupBalances = async function(groupId) {
-  console.log('🔍 DEBUG - calculateGroupBalances for group:', groupId.toString());
+  
   
   const expenses = await this.find({ groupId })
     .populate('payerId', 'name email')
     .populate('splits.memberId', 'name email');
   
-  console.log('  - Found expenses:', expenses.length);
+  
   
   const balances = new Map();
   
-  // Initialize balances for all members who appear in expenses
+  // Initializing balance objects for all members involved in the expenses.
   expenses.forEach(expense => {
-    // Initialize payer
+    // Initializing the balance for the payer of the expense.
     const payerId = expense.payerId._id.toString();
     if (!balances.has(payerId)) {
       balances.set(payerId, {
         userId: payerId,
         name: expense.payerId.name,
         email: expense.payerId.email,
-        totalPaid: 0,        // Total money paid (out of pocket + split payments)
+        totalPaid: 0,        // The total amount of money this user has paid, including their own share and payments for others.
         totalOwed: 0,        // Current unpaid debt only
         totalSpentOnOwn: 0,  // Money spent on own expenses vs for others
         netBalance: 0,       // Net amount (positive = owed money, negative = owes money)

@@ -1,3 +1,4 @@
+// This service manages all expense-related logic, including creation, updates, splits, and notifications.
 const Expense = require('../models/Expense');
 const Group = require('../models/Group');
 const User = require('../models/User');
@@ -6,12 +7,14 @@ const notificationService = require('./notifications/notificationService');
 const eventBus = require('../services/notifications/eventBus');
 const { EventTypes } = require('../utils/eventTypes');
 
+// ExpenseService encapsulates all business logic for managing expenses within groups.
 class ExpenseService {
   constructor() {
     // Keep notification service for email calls
     this.notificationService = null;
   }
 
+  // Lazily loads and returns the notification service to avoid circular dependencies.
   getNotificationService() {
     if (!this.notificationService) {
       this.notificationService = notificationService;
@@ -19,6 +22,7 @@ class ExpenseService {
     return this.notificationService;
   }
 
+  // Creates a new expense, calculates equal splits, and triggers notifications.
   async createExpense(expenseData, payerId) {
     try {
       // Get group with members for split calculation
@@ -75,6 +79,7 @@ class ExpenseService {
     }
   }
 
+  // Updates an existing expense and recalculates splits if the amount has changed.
   async updateExpense(expenseId, updateData, requestingUserId) {
     try {
       const expense = await Expense.findById(expenseId);
@@ -139,6 +144,7 @@ class ExpenseService {
     }
   }
 
+  // Deletes an expense after verifying the user has the necessary permissions.
   async deleteExpense(expenseId, requestingUserId) {
     try {
       const expense = await Expense.findById(expenseId);
@@ -189,6 +195,7 @@ class ExpenseService {
     }
   }
 
+  // Marks a specific split of an expense as paid and triggers notifications upon full settlement.
   async markSplitPaid(expenseId, memberId, requestingUserId) {
     try {
       const expense = await Expense.findById(expenseId);
@@ -311,6 +318,7 @@ class ExpenseService {
     }
   }
 
+  // Sends payment reminders for outstanding expenses within a group.
   async sendPaymentReminders(groupId, requestingUserId, daysThreshold = 3) {
     try {
       // 📧 DIRECT EMAIL CALL for payment reminders
@@ -328,6 +336,7 @@ class ExpenseService {
     }
   }
 
+  // Sets custom splits for an expense, allowing for unequal distributions of the cost.
   async setCustomSplits(expenseId, customSplits, requestingUserId) {
     try {
       const expense = await Expense.findById(expenseId);
@@ -380,7 +389,7 @@ class ExpenseService {
     }
   }
 
-  // Keep all getter methods unchanged
+  // Retrieves all expenses for a group, with optional filters.
   async getExpenses(groupId, filters = {}, requestingUserId) {
     try {
       const expenses = await Expense.getGroupExpenses(groupId, filters);
@@ -396,6 +405,7 @@ class ExpenseService {
     }
   }
 
+  // Retrieves a single expense by its ID.
   async getExpense(expenseId, requestingUserId) {
     try {
       const expense = await Expense.findById(expenseId)

@@ -14,5 +14,3 @@ async function getGroupContext(groupId, requestingUserId, recentTaskLimit = 10) 
 }
 
 module.exports = { getGroupContext };
-
-module.exports = { getGroupContext };

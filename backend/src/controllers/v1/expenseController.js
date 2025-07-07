@@ -1,0 +1,392 @@
+const expenseService = require('../../services/expenseService');
+const responseHelper = require('../../utils/responseHelper');
+const logger = require('../../utils/logger');
+
+// A controller for managing expenses, including creation, retrieval, and settlement.
+class ExpenseController {
+    // Creates a new expense within a group.
+  async createExpense(req, res, next) {
+    try {
+      const expense = await expenseService.createExpense(req.body, req.user.id);
+      
+      responseHelper.success(
+        res,
+        'Expense created successfully',
+        { expense },
+        201
+      );
+    } catch (error) {
+      if (error.message === 'Access denied - not a group member') {
+        return responseHelper.forbidden(res, error.message);
+      }
+      next(error);
+    }
+  }
+
+    // Retrieves a list of expenses for the current group, with optional filters.
+  async getExpenses(req, res, next) {
+    try {
+      const filters = {
+        payerId: req.query.payerId,
+        category: req.query.category,
+        isSettled: req.query.isSettled === 'true' ? true : 
+                   req.query.isSettled === 'false' ? false : undefined,
+        startDate: req.query.startDate,
+        endDate: req.query.endDate,
+      };
+
+      // Removes any undefined filter values to prevent issues with the database query.
+      Object.keys(filters).forEach(key => {
+        if (filters[key] === undefined) delete filters[key];
+      });
+
+      const result = await expenseService.getExpenses(req.group._id, filters, req.user.id);
+      
+      responseHelper.success(
+        res,
+        'Expenses retrieved successfully',
+        result
+      );
+    } catch (error) {
+      if (error.message === 'Access denied - not a group member') {
+        return responseHelper.forbidden(res, error.message);
+      }
+      next(error);
+    }
+  }
+
+    // Retrieves a single expense by its ID.
+  async getExpense(req, res, next) {
+    try {
+      const { expenseId } = req.params;
+      const expense = await expenseService.getExpense(expenseId, req.user.id);
+      
+      responseHelper.success(
+        res,
+        'Expense retrieved successfully',
+        { expense }
+      );
+    } catch (error) {
+      if (error.message === 'Expense not found') {
+        return responseHelper.notFound(res, error.message);
+      }
+      if (error.message === 'Access denied - not a group member') {
+        return responseHelper.forbidden(res, error.message);
+      }
+      next(error);
+    }
+  }
+
+    // Updates an existing expense.
+  async updateExpense(req, res, next) {
+    try {
+      const { expenseId } = req.params;
+      const expense = await expenseService.updateExpense(expenseId, req.body, req.user.id);
+      
+      responseHelper.success(
+        res,
+        'Expense updated successfully',
+        { expense }
+      );
+    } catch (error) {
+      if (error.message === 'Expense not found') {
+        return responseHelper.notFound(res, error.message);
+      }
+      if (error.message.includes('permissions')) {
+        return responseHelper.forbidden(res, error.message);
+      }
+      next(error);
+    }
+  }
+
+    // Deletes an expense.
+  async deleteExpense(req, res, next) {
+    try {
+      const { expenseId } = req.params;
+      const result = await expenseService.deleteExpense(expenseId, req.user.id);
+      
+      responseHelper.success(
+        res,
+        result.message
+      );
+    } catch (error) {
+      if (error.message === 'Expense not found') {
+        return responseHelper.notFound(res, error.message);
+      }
+      if (error.message.includes('permissions')) {
+        return responseHelper.forbidden(res, error.message);
+      }
+      next(error);
+    }
+  }
+
+    // Marks a specific split of an expense as paid.
+  async markSplitPaid(req, res, next) {
+    try {
+      const { expenseId, memberId } = req.params;
+      const expense = await expenseService.markSplitPaid(expenseId, memberId, req.user.id);
+      
+      responseHelper.success(
+        res,
+        'Split marked as paid successfully',
+        { expense }
+      );
+    } catch (error) {
+      if (error.message === 'Expense not found') {
+        return responseHelper.notFound(res, error.message);
+      }
+      if (error.message.includes('permissions')) {
+        return responseHelper.forbidden(res, error.message);
+      }
+      next(error);
+    }
+  }
+
+    // Retrieves the financial balances for all members of the current group.
+  async getGroupBalances(req, res, next) {
+    try {
+      const result = await expenseService.getGroupBalances(req.group._id, req.user.id);
+      
+      responseHelper.success(
+        res,
+        'Group balances retrieved successfully',
+        result
+      );
+    } catch (error) {
+      if (error.message === 'Access denied - not a group member') {
+        return responseHelper.forbidden(res, error.message);
+      }
+      next(error);
+    }
+  }
+
+    // Retrieves enhanced financial balances, including debts and credits between members.
+  async getEnhancedGroupBalances(req, res, next) {
+    try {
+        const result = await expenseService.getEnhancedGroupBalances(req.group._id, req.user.id);
+        
+        responseHelper.success(
+        res,
+        'Enhanced group balances retrieved successfully',
+        result
+        );
+    } catch (error) {
+        next(error);
+    }
+  }
+
+    // Retrieves a detailed financial balance for a specific user in the group.
+  async getDetailedUserBalance(req, res, next) {
+    try {
+        const { userId } = req.params;
+        const result = await expenseService.getDetailedUserBalance(
+        req.group._id, 
+        userId || req.user.id, 
+        req.user.id
+        );
+        
+        responseHelper.success(
+        res,
+        'Detailed user balance retrieved successfully',
+        result
+        );
+    } catch (error) {
+        if (error.message.includes('Can only view your own')) {
+        return responseHelper.forbidden(res, error.message);
+        }
+        next(error);
+    }
+  }
+
+    // Validates the integrity of all expenses in the group to ensure financial correctness.
+  async validateExpenseIntegrity(req, res, next) {
+    try {
+        const result = await expenseService.validateExpenseIntegrity(req.group._id, req.user.id);
+        
+        responseHelper.success(
+        res,
+        'Expense integrity check completed',
+        result
+        );
+    } catch (error) {
+        next(error);
+    }
+  }
+
+  async setCustomSplits(req, res, next) {
+    try {
+      const { expenseId } = req.params;
+      const { splits } = req.body;
+      
+      const expense = await expenseService.setCustomSplits(expenseId, splits, req.user.id);
+      
+      responseHelper.success(
+        res,
+        'Custom splits set successfully',
+        { expense }
+      );
+    } catch (error) {
+      if (error.message === 'Expense not found') {
+        return responseHelper.notFound(res, error.message);
+      }
+      if (error.message.includes('Only admins') || error.message.includes('permissions')) {
+        return responseHelper.forbidden(res, error.message);
+      }
+      if (error.message.includes('must add up') || error.message.includes('must include')) {
+        return responseHelper.error(res, error.message, 400, 'INVALID_SPLITS');
+      }
+      next(error);
+    }
+  }
+
+  async resetToEqualSplits(req, res, next) {
+    try {
+      const { expenseId } = req.params;
+      
+      const expense = await expenseService.resetToEqualSplits(expenseId, req.user.id);
+      
+      responseHelper.success(
+        res,
+        'Splits reset to equal successfully',
+        { expense }
+      );
+    } catch (error) {
+      if (error.message === 'Expense not found') {
+        return responseHelper.notFound(res, error.message);
+      }
+      if (error.message.includes('Only admins')) {
+        return responseHelper.forbidden(res, error.message);
+      }
+      next(error);
+    }
+  }
+
+  async getExpenseSummary(req, res, next) {
+    try {
+      const { expenseId } = req.params;
+      
+      const result = await expenseService.getExpenseSummary(expenseId, req.user.id);
+      
+      responseHelper.success(
+        res,
+        'Expense summary retrieved successfully',
+        result
+      );
+    } catch (error) {
+      if (error.message === 'Expense not found') {
+        return responseHelper.notFound(res, error.message);
+      }
+      next(error);
+    }
+  }
+
+  async createExpenseWithCustomSplits(req, res, next) {
+    try {
+      const { customSplits, ...expenseData } = req.body;
+      
+      const expense = await expenseService.createExpenseWithCustomSplits(
+        expenseData, 
+        req.user.id, 
+        customSplits
+      );
+      
+      responseHelper.success(
+        res,
+        'Expense created successfully',
+        { expense },
+        201
+      );
+    } catch (error) {
+      if (error.message.includes('Group not found')) {
+        return responseHelper.notFound(res, error.message);
+      }
+      if (error.message.includes('must add up') || error.message.includes('must include')) {
+        return responseHelper.error(res, error.message, 400, 'INVALID_SPLITS');
+      }
+      next(error);
+    }
+  }
+
+  async getUnpaidExpenses(req, res, next) {
+    try {
+      const result = await expenseService.getUnpaidExpenses(req.group._id, req.user.id);
+      
+      responseHelper.success(
+        res,
+        'Unpaid expenses retrieved successfully',
+        result
+      );
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getMyOwedAmount(req, res, next) {
+    try {
+      const result = await expenseService.getUserOwedAmount(req.group._id, req.user.id);
+      
+      responseHelper.success(
+        res,
+        'Your owed amount retrieved successfully',
+        result
+      );
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getExpenseStatistics(req, res, next) {
+    try {
+      const { period } = req.query;
+      const result = await expenseService.getExpenseStatistics(
+        req.group._id, 
+        req.user.id, 
+        period
+      );
+      
+      responseHelper.success(
+        res,
+        'Expense statistics retrieved successfully',
+        result
+      );
+    } catch (error) {
+      if (error.message === 'Access denied - not a group member') {
+        return responseHelper.forbidden(res, error.message);
+      }
+      next(error);
+    }
+  }
+  
+  async sendPaymentReminders(req, res, next) {
+    try {
+      const { daysThreshold } = req.query;
+      const threshold = daysThreshold ? parseInt(daysThreshold) : 3;
+      
+      const result = await expenseService.sendPaymentReminders(
+        req.group._id, 
+        req.user.id, 
+        threshold
+      );
+      
+      responseHelper.success(
+        res,
+        `Payment reminders sent successfully`,
+        {
+          remindersSent: result.remindersSent,
+          unpaidExpenses: result.unpaidExpenses,
+          daysThreshold: threshold
+        }
+      );
+    } catch (error) {
+      if (error.message.includes('Only admins')) {
+        return responseHelper.forbidden(res, error.message);
+      }
+      if (error.message === 'Access denied - not a group member') {
+        return responseHelper.forbidden(res, error.message);
+      }
+      next(error);
+    }
+  }
+}
+
+module.exports = new ExpenseController();

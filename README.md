@@ -319,10 +319,11 @@ API_VERSION=1.0
 
 ### **Group 21 **
 
-| Team Member | Role | Specialization | Contact |
+| Team Member | Role | Scope and responsabilities | Contact |
 |-------------|------|----------------|---------|
 | **R Yanis Axel DABO** | Software Engineer | Backend Architecture & AI Integration | [@Y4NN](https://github.com/Y4NN777) |
 | **Rayane BICABA** | Software Engineer | Mobile Development & User Experience | [@Ryko](https://github.com/RayaneBICABA) |
+
 
 ### **Academic Framework**
 
@@ -478,7 +479,7 @@ This project is licensed under the MIT License - see [LICENSE](LICENSE) for deta
 
 ### *Where Shared Living Meets Simplicity*
 
-**Built with precision and passion by Group 21**
+**Built with precision and passion by Y4NN & Ryko**
 
 ---
 

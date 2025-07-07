@@ -4,7 +4,7 @@ import '../../widgets/auth/animated_text_field.dart';
 import '../../widgets/auth/custom_button.dart';
 
 class RegisterPage extends StatefulWidget {
-  const RegisterPage({Key? key}) : super(key: key);
+  const RegisterPage({super.key});
 
   @override
   State<RegisterPage> createState() => _RegisterPageState();
@@ -351,8 +351,8 @@ class _RegisterPageState extends State<RegisterPage>
                       fontSize: 14,
                       color: primaryBlue.withOpacity(0.7),
                     ),
-                    children: [
-                      const TextSpan(text: 'I agree to the '),
+                    children: const [
+                      TextSpan(text: 'I agree to the '),
                       TextSpan(
                         text: 'Terms of Service',
                         style: TextStyle(
@@ -361,7 +361,7 @@ class _RegisterPageState extends State<RegisterPage>
                           decoration: TextDecoration.underline,
                         ),
                       ),
-                      const TextSpan(text: ' and '),
+                      TextSpan(text: ' and '),
                       TextSpan(
                         text: 'Privacy Policy',
                         style: TextStyle(

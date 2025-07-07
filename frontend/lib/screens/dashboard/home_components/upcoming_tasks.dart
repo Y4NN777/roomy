@@ -6,11 +6,11 @@ class UpcomingTasks extends StatelessWidget {
   final Color primaryOrange;
 
   const UpcomingTasks({
-    Key? key,
+    super.key,
     required this.primaryBlue,
     required this.white,
     required this.primaryOrange,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

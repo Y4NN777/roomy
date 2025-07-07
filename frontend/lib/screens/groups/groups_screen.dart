@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import '../../core/app_colors.dart';
 
 class GroupsPage extends StatefulWidget {
-  const GroupsPage({Key? key}) : super(key: key);
+  const GroupsPage({super.key});
 
   @override
   State<GroupsPage> createState() => _GroupsPageState();
@@ -165,7 +164,7 @@ class _GroupsPageState extends State<GroupsPage> with TickerProviderStateMixin {
                   minWidth: 20,
                   minHeight: 20,
                 ),
-                child: Center(
+                child: const Center(
                   child: Text(
                     '3',
                     style: TextStyle(
@@ -267,11 +266,11 @@ class _GroupsPageState extends State<GroupsPage> with TickerProviderStateMixin {
                   // Handle invite action
                 },
                 borderRadius: BorderRadius.circular(16),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
-                    children: const [
+                    children: [
                       Icon(
                         Icons.add,
                         color: AppColors.white,

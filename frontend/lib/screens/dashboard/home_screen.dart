@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import '../../core/app_colors.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({Key? key}) : super(key: key);
+  const HomePage({super.key});
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -165,7 +164,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   minWidth: 20,
                   minHeight: 20,
                 ),
-                child: Center(
+                child: const Center(
                   child: Text(
                     '3',
                     style: TextStyle(
@@ -483,7 +482,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               color: AppColors.primaryOrange.withOpacity(0.1),
               borderRadius: BorderRadius.circular(16),
             ),
-            child: Icon(
+            child: const Icon(
               Icons.delete_outline,
               color: AppColors.primaryOrange,
               size: 24,

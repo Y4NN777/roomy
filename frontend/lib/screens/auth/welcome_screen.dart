@@ -2,19 +2,19 @@ import 'package:flutter/material.dart';
 import '../../core/app_colors.dart';
 
 class WelcomePage extends StatelessWidget {
-  const WelcomePage({Key? key}) : super(key: key);
+  const WelcomePage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return const Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+          padding: EdgeInsets.symmetric(horizontal: 24.0),
           child: Column(
             children: [
-              const SizedBox(height: 80),
-              const Expanded(
+              SizedBox(height: 80),
+              Expanded(
                 flex: 3,
                 child: Center(child: LogoWidget()),
               ),
@@ -22,7 +22,7 @@ class WelcomePage extends StatelessWidget {
                 flex: 1,
                 child: ButtonSection(),
               ),
-              const SizedBox(height: 40),
+              SizedBox(height: 40),
             ],
           ),
         ),
@@ -32,7 +32,7 @@ class WelcomePage extends StatelessWidget {
 }
 
 class LogoWidget extends StatelessWidget {
-  const LogoWidget({Key? key}) : super(key: key);
+  const LogoWidget({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -100,7 +100,7 @@ class LogoWidget extends StatelessWidget {
 }
 
 class ButtonSection extends StatelessWidget {
-  const ButtonSection({Key? key}) : super(key: key);
+  const ButtonSection({super.key});
 
   @override
   Widget build(BuildContext context) {

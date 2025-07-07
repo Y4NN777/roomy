@@ -6,11 +6,11 @@ class HomeHeader extends StatelessWidget {
   final Color white;
 
   const HomeHeader({
-    Key? key,
+    super.key,
     required this.primaryBlue,
     required this.primaryOrange,
     required this.white,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

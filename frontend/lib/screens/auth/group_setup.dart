@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import '../../core/app_colors.dart';
 import '../../services/group_service.dart';
 import '../../widgets/auth/custom_button.dart';
@@ -7,7 +6,7 @@ import '../../widgets/auth/custom_button.dart';
 /// Screen for users to join or create a group.
 /// Uses animations and modal bottom sheets for input.
 class GroupSetupPage extends StatefulWidget {
-  const GroupSetupPage({Key? key}) : super(key: key);
+  const GroupSetupPage({super.key});
 
   @override
   State<GroupSetupPage> createState() => _GroupSetupPageState();
@@ -131,7 +130,7 @@ class _GroupSetupPageState extends State<GroupSetupPage>
                 ),
               ],
             ),
-            child: Center(
+            child: const Center(
               child: Icon(
                 Icons.group_outlined,
                 size: 50,
@@ -154,8 +153,8 @@ class _GroupSetupPageState extends State<GroupSetupPage>
           offset: Offset(0, 30 * (1 - value)),
           child: Opacity(
             opacity: value,
-            child: Column(
-              children: const [
+            child: const Column(
+              children: [
                 Text(
                   'Join or Create Group',
                   textAlign: TextAlign.center,
@@ -225,9 +224,9 @@ class _GroupSetupPageState extends State<GroupSetupPage>
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
         height: MediaQuery.of(context).size.height * 0.7,
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           color: AppColors.white,
-          borderRadius: const BorderRadius.only(
+          borderRadius: BorderRadius.only(
             topLeft: Radius.circular(24),
             topRight: Radius.circular(24),
           ),
@@ -339,9 +338,9 @@ class _GroupSetupPageState extends State<GroupSetupPage>
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
         height: MediaQuery.of(context).size.height * 0.6,
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           color: AppColors.white,
-          borderRadius: const BorderRadius.only(
+          borderRadius: BorderRadius.only(
             topLeft: Radius.circular(24),
             topRight: Radius.circular(24),
           ),
@@ -413,14 +412,14 @@ class _GroupSetupPageState extends State<GroupSetupPage>
                     width: 1,
                   ),
                 ),
-                child: Row(
+                child: const Row(
                   children: [
                     Icon(
                       Icons.info_outline,
                       color: AppColors.primaryOrange,
                       size: 20,
                     ),
-                    const SizedBox(width: 12),
+                    SizedBox(width: 12),
                     Expanded(
                       child: Text(
                         'Ask your roommate for the group code to join their existing group.',

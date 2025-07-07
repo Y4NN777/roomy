@@ -7,7 +7,7 @@ import '../../widgets/auth/custom_button.dart';
 
 /// Login screen with animated form fields and login logic separated into AuthService.
 class LoginPage extends StatefulWidget {
-  const LoginPage({Key? key}) : super(key: key);
+  const LoginPage({super.key});
 
   @override
   State<LoginPage> createState() => _LoginPageState();

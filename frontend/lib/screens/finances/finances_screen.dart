@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import '../../core/app_colors.dart';
 
 class FinancesPage extends StatefulWidget {
-  const FinancesPage({Key? key}) : super(key: key);
+  const FinancesPage({super.key});
 
   @override
   State<FinancesPage> createState() => _FinancesPageState();
@@ -166,7 +165,7 @@ class _FinancesPageState extends State<FinancesPage>
                   minWidth: 20,
                   minHeight: 20,
                 ),
-                child: Center(
+                child: const Center(
                   child: Text(
                     '3',
                     style: TextStyle(
@@ -269,12 +268,12 @@ class _FinancesPageState extends State<FinancesPage>
                   // Handle add expense action
                 },
                 borderRadius: BorderRadius.circular(16),
-                child: Padding(
+                child: const Padding(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
-                    children: const [
+                    children: [
                       Icon(
                         Icons.add,
                         color: AppColors.white,

@@ -6,7 +6,7 @@ import '../../core/app_colors.dart';
 import '../../models/task.dart';
 
 class TasksPage extends StatefulWidget {
-  const TasksPage({Key? key}) : super(key: key);
+  const TasksPage({super.key});
 
   @override
   State<TasksPage> createState() => _TasksPageState();
@@ -136,9 +136,9 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
 
   Widget _buildHeader() {
     return Container(
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: AppColors.primaryBlue,
-        borderRadius: const BorderRadius.only(
+        borderRadius: BorderRadius.only(
           bottomLeft: Radius.circular(20),
           bottomRight: Radius.circular(20),
         ),
@@ -188,7 +188,7 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
                         child: Container(
                           width: 18,
                           height: 18,
-                          decoration: BoxDecoration(
+                          decoration: const BoxDecoration(
                             color: AppColors.primaryOrange,
                             shape: BoxShape.circle,
                           ),
@@ -505,7 +505,7 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
                               },
                               style: OutlinedButton.styleFrom(
                                 padding: const EdgeInsets.symmetric(vertical: 12),
-                                side: BorderSide(color: AppColors.primaryBlue),
+                                side: const BorderSide(color: AppColors.primaryBlue),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(8),
                                 ),
@@ -717,7 +717,7 @@ class _TasksPageState extends State<TasksPage> with TickerProviderStateMixin {
                           onPressed: () => setState(() => _showAddTask = false),
                           style: OutlinedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 16),
-                            side: BorderSide(color: AppColors.primaryBlue),
+                            side: const BorderSide(color: AppColors.primaryBlue),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
                             ),

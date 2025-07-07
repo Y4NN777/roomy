@@ -46,7 +46,7 @@ sealed class Result<T> {
   /// Handle only success case
   void whenSuccess(void Function(T value) handler) {
     if (isSuccess && successValue != null) {
-      handler(successValue!);
+      handler(successValue as T);
     }
   }
   

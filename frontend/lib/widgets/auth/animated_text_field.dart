@@ -14,7 +14,7 @@ class AnimatedTextField extends StatelessWidget {
   final String? Function(String?)? validator;
 
   const AnimatedTextField({
-    Key? key,
+    super.key,
     required this.controller,
     required this.label,
     required this.icon,
@@ -24,7 +24,7 @@ class AnimatedTextField extends StatelessWidget {
     this.keyboardType,
     this.delay = 0,
     this.validator,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

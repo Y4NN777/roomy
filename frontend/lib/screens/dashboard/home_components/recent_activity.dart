@@ -6,11 +6,11 @@ class RecentActivity extends StatelessWidget {
   final Color white;
 
   const RecentActivity({
-    Key? key,
+    super.key,
     required this.primaryBlue,
     required this.primaryOrange,
     required this.white,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

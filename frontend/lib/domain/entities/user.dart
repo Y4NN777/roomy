@@ -4,6 +4,7 @@ class User {
   final String name;
   final String email;
   final String? profilePicture;
+  final String? groupId; // Add this field
   final DateTime createdAt;
   final DateTime updatedAt;
   final bool isActive;
@@ -13,6 +14,7 @@ class User {
     required this.name,
     required this.email,
     this.profilePicture,
+    this.groupId, // Add this parameter
     required this.createdAt,
     required this.updatedAt,
     required this.isActive,
@@ -24,6 +26,7 @@ class User {
     String? name,
     String? email,
     String? profilePicture,
+    String? groupId, // Add this parameter
     DateTime? createdAt,
     DateTime? updatedAt,
     bool? isActive,
@@ -33,6 +36,7 @@ class User {
       name: name ?? this.name,
       email: email ?? this.email,
       profilePicture: profilePicture ?? this.profilePicture,
+      groupId: groupId ?? this.groupId, // Add this line
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       isActive: isActive ?? this.isActive,
@@ -48,6 +52,7 @@ class User {
           name == other.name &&
           email == other.email &&
           profilePicture == other.profilePicture &&
+          groupId == other.groupId && // Add this line
           createdAt == other.createdAt &&
           updatedAt == other.updatedAt &&
           isActive == other.isActive;
@@ -58,12 +63,13 @@ class User {
       name.hashCode ^
       email.hashCode ^
       profilePicture.hashCode ^
+      groupId.hashCode ^ // Add this line
       createdAt.hashCode ^
       updatedAt.hashCode ^
       isActive.hashCode;
 
   @override
   String toString() {
-    return 'User(id: $id, name: $name, email: $email, isActive: $isActive)';
+    return 'User(id: $id, name: $name, email: $email, groupId: $groupId, isActive: $isActive)';
   }
-} 
+}

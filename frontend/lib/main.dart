@@ -1,45 +1,38 @@
 import 'package:flutter/material.dart';
-import 'screens/auth/register_screen.dart';
-import 'screens/auth/login_screen.dart';
-import 'screens/auth/welcome_screen.dart';
-import 'screens/auth/group_setup.dart';
-import 'screens/dashboard/home_screen.dart';
-import 'screens/task/tasks_screen.dart';
-// Import placeholders for groups and finances screens
-import 'screens/groups/groups_screen.dart';
-import 'screens/finances/finances_screen.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'config/router/app_router.dart';
+import 'config/di/injection.dart';
+import 'core/theme/app_themes.dart';
+import 'shared/services/local_notification_service.dart';
 
-void main() {
-  runApp(const MyApp());
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize dependencies
+  await setupDependencies();
+  
+  // Initialize local notifications
+  await LocalNotificationService.instance.initialize();
+  
+  runApp(
+    const ProviderScope(
+      child: MyApp(),
+    ),
+  );
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends ConsumerWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
+  Widget build(BuildContext context, WidgetRef ref) {
+    final router = ref.watch(routerProvider);
+    
+    return MaterialApp.router(
       debugShowCheckedModeBanner: false,
       title: 'Roomy App',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
-      ),
-      initialRoute: '/HomePage',
-      routes: {
-        '/welcome': (context) => const WelcomePage(),
-        '/login': (context) => const LoginPage(),
-        '/register': (context) => const RegisterPage(),
-        '/group-setup': (context) => const GroupSetupPage(),
-        '/main': (context) => const HomePage(),
-        '/task': (context) => const TasksPage(),
-        '/groups': (context) => const GroupsPage(), // Placeholder screen
-        '/finances': (context) => const FinancesPage(), // Placeholder screen
-      },
-      onUnknownRoute: (settings) {
-        // Redirect unknown routes to welcome page
-        return MaterialPageRoute(builder: (context) => const WelcomePage());
-      },
+      theme: AppTheme.lightTheme,
+      routerConfig: router,
     );
   }
 }

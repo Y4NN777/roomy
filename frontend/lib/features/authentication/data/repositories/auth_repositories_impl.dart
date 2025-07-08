@@ -1,8 +1,9 @@
-import '../../../../domain/entities/user.dart'; // Use domain user
+import '../../../../domain/entities/user.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../../../../data/datasources/api_client.dart';
 import '../../../../data/models/user_model.dart';
 import '../../../../core/storage/secure_storage.dart';
+import '../../../../core/constants/api_routes.dart';
 
 class AuthRepositoryImpl implements AuthRepository {
   final ApiClient _apiClient;
@@ -12,39 +13,25 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<User?> login(String email, String password) async {
     try {
-      // TODO: Replace with real API call
-      await Future.delayed(const Duration(seconds: 2));
-      
-      if (email.isNotEmpty && password.isNotEmpty) {
-        final mockUser = UserModel(
-          id: 'user_123',
-          name: 'John Doe',
-          email: email,
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-          isActive: true,
-          groupId: '', // Add groupId parameter
-        );
+      final response = await _apiClient.post(
+        ApiRoutes.login,
+        data: {
+          'email': email,
+          'password': password,
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = response.data['data'];
+        final userModel = UserModel.fromJson(data['user']);
         
-        await SecureStorage.storeUser(mockUser);
         await SecureStorage.storeTokens(
-          accessToken: 'mock_access_token',
-          refreshToken: 'mock_refresh_token',
+          accessToken: data['token'],
+          refreshToken: data['refreshToken'],
         );
+        await SecureStorage.storeUser(userModel);
         
-        // Convert to auth domain User entity
-        final authUser = User(
-          id: mockUser.id,
-          name: mockUser.name,
-          email: mockUser.email,
-          profilePicture: mockUser.profilePicture,
-          groupId: mockUser.groupId,
-          createdAt: mockUser.createdAt,
-          updatedAt: mockUser.updatedAt,
-          isActive: mockUser.isActive,
-        );
-        
-        return authUser;
+        return userModel.toDomainEntity();
       }
       return null;
     } catch (e) {
@@ -55,39 +42,26 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<User?> register(String name, String email, String password) async {
     try {
-      // TODO: Replace with real API call
-      await Future.delayed(const Duration(seconds: 2));
-      
-      if (name.isNotEmpty && email.isNotEmpty && password.isNotEmpty) {
-        final mockUser = UserModel(
-          id: 'user_${DateTime.now().millisecondsSinceEpoch}',
-          name: name,
-          email: email,
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-          isActive: true,
-          groupId: '', // Add groupId parameter
-        );
+      final response = await _apiClient.post(
+        ApiRoutes.register,
+        data: {
+          'name': name,
+          'email': email,
+          'password': password,
+        },
+      );
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        final data = response.data['data'];
+        final userModel = UserModel.fromJson(data['user']);
         
-        await SecureStorage.storeUser(mockUser);
         await SecureStorage.storeTokens(
-          accessToken: 'mock_access_token',
-          refreshToken: 'mock_refresh_token',
+          accessToken: data['token'],
+          refreshToken: data['refreshToken'],
         );
+        await SecureStorage.storeUser(userModel);
         
-        // Convert to auth domain User entity
-        final authUser = User(
-          id: mockUser.id,
-          name: mockUser.name,
-          email: mockUser.email,
-          profilePicture: mockUser.profilePicture,
-          groupId: mockUser.groupId,
-          createdAt: mockUser.createdAt,
-          updatedAt: mockUser.updatedAt,
-          isActive: mockUser.isActive,
-        );
-        
-        return authUser;
+        return userModel.toDomainEntity();
       }
       return null;
     } catch (e) {
@@ -97,27 +71,20 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<void> logout() async {
-    await SecureStorage.clearAll();
+    try {
+      await _apiClient.post(ApiRoutes.logout);
+    } catch (e) {
+      // Continue with logout even if API call fails
+    } finally {
+      await SecureStorage.clearAll();
+    }
   }
 
   @override
   Future<User?> getCurrentUser() async {
     try {
       final userModel = await SecureStorage.getUser();
-      if (userModel != null) {
-        // Convert to auth domain User entity
-        return User(
-          id: userModel.id,
-          name: userModel.name,
-          email: userModel.email,
-          profilePicture: userModel.profilePicture,
-          groupId: userModel.groupId,
-          createdAt: userModel.createdAt,
-          updatedAt: userModel.updatedAt,
-          isActive: userModel.isActive,
-        );
-      }
-      return null;
+      return userModel?.toDomainEntity();
     } catch (e) {
       return null;
     }
@@ -125,12 +92,57 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<String?> refreshToken() async {
-    // TODO: Implement token refresh logic with _apiClient
-    return await SecureStorage.getRefreshToken();
+    final refreshToken = await SecureStorage.getRefreshToken();
+    if (refreshToken == null) return null;
+
+    try {
+      final response = await _apiClient.post(
+        ApiRoutes.refreshToken,
+        data: {'refreshToken': refreshToken},
+      );
+
+      if (response.statusCode == 200) {
+        final data = response.data['data'];
+        await SecureStorage.storeTokens(
+          accessToken: data['token'],
+          refreshToken: data['refreshToken'],
+        );
+        return data['token'];
+      }
+    } catch (e) {
+      await SecureStorage.clearAll();
+    }
+    return null;
   }
 
   @override
   Future<bool> isAuthenticated() async {
-    return await SecureStorage.isAuthenticated();
+    final token = await SecureStorage.getAccessToken();
+    return token != null;
+  }
+
+  @override
+  Future<User?> updateProfile({
+    String? name,
+    String? email,
+  }) async {
+    try {
+      final response = await _apiClient.put(
+        ApiRoutes.profile,
+        data: {
+          if (name != null) 'name': name,
+          if (email != null) 'email': email,
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final userModel = UserModel.fromJson(response.data['data']);
+        await SecureStorage.storeUser(userModel);
+        return userModel.toDomainEntity();
+      }
+      return null;
+    } catch (e) {
+      throw Exception('Profile update failed: $e');
+    }
   }
 }

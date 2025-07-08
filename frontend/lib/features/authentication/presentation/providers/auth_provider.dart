@@ -1,7 +1,15 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../domain/entities/user.dart'; // Use domain user only
-import '../../../../core/storage/secure_storage.dart';
-import '../../../../data/models/user_model.dart';
+import '../../../../domain/entities/user.dart';
+import '../../../../config/di/injection.dart';
+import '../../../../features/authentication/domain/repositories/auth_repository.dart';
+import '../../data/repositories/auth_repositories_impl.dart';
+
+final authRepositoryProvider = Provider<AuthRepository>((ref) {
+  final apiClient = ref.read(apiClientProvider);
+  return AuthRepositoryImpl(apiClient: apiClient);
+});
+
+
 
 // Auth state class
 class AuthState {
@@ -32,11 +40,15 @@ class AuthState {
       error: clearError ? null : (error ?? this.error),
     );
   }
+
+  bool get hasGroup => currentUser?.groupId != null;
 }
 
 // Auth provider
 class AuthNotifier extends StateNotifier<AuthState> {
-  AuthNotifier() : super(const AuthState()) {
+  final AuthRepository _authRepository;
+
+  AuthNotifier(this._authRepository) : super(const AuthState()) {
     _checkAuthStatus();
   }
 
@@ -44,24 +56,20 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = state.copyWith(isLoading: true);
     
     try {
-      final isAuthenticated = await SecureStorage.isAuthenticated();
-      if (isAuthenticated) {
-        final userModel = await SecureStorage.getUser();
-        if (userModel != null) {
-          state = state.copyWith(
-            currentUser: userModel.toDomainEntity(), // Use domain entity method
-            isAuthenticated: true,
-            isLoading: false,
-          );
-          return;
-        }
+      final user = await _authRepository.getCurrentUser();
+      if (user != null) {
+        state = state.copyWith(
+          currentUser: user,
+          isAuthenticated: true,
+          isLoading: false,
+        );
+      } else {
+        state = state.copyWith(
+          isAuthenticated: false,
+          isLoading: false,
+          clearUser: true,
+        );
       }
-      
-      state = state.copyWith(
-        isAuthenticated: false,
-        isLoading: false,
-        clearUser: true,
-      );
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
@@ -71,86 +79,44 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<bool> login(String email, String password) async {
-    state = state.copyWith(
-      isLoading: true, 
-      clearError: true,
-    );
+    state = state.copyWith(isLoading: true, clearError: true);
     
     try {
-      // TODO: Replace with real API call
-      await Future.delayed(const Duration(seconds: 2));
-      
-      if (email.isNotEmpty && password.isNotEmpty) {
-        final mockUser = UserModel(
-          id: 'user_123',
-          name: 'John Doe',
-          email: email,
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-          isActive: true,
-        );
-        
-        await SecureStorage.storeUser(mockUser);
-        await SecureStorage.storeTokens(
-          accessToken: 'mock_access_token',
-          refreshToken: 'mock_refresh_token',
-        );
-        
+      final user = await _authRepository.login(email, password);
+      if (user != null) {
         state = state.copyWith(
-          currentUser: mockUser.toDomainEntity(), // Use domain entity method
+          currentUser: user,
           isAuthenticated: true,
           isLoading: false,
         );
-        
         return true;
       }
       
       state = state.copyWith(
         isLoading: false,
-        error: 'Invalid credentials',
+        error: 'Invalid email or password',
       );
       return false;
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        error: e.toString(),
+        error: _extractErrorMessage(e),
       );
       return false;
     }
   }
 
   Future<bool> register(String name, String email, String password) async {
-    state = state.copyWith(
-      isLoading: true, 
-      clearError: true,
-    );
+    state = state.copyWith(isLoading: true, clearError: true);
     
     try {
-      // TODO: Replace with real API call
-      await Future.delayed(const Duration(seconds: 2));
-      
-      if (name.isNotEmpty && email.isNotEmpty && password.isNotEmpty) {
-        final mockUser = UserModel(
-          id: 'user_${DateTime.now().millisecondsSinceEpoch}',
-          name: name,
-          email: email,
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-          isActive: true,
-        );
-        
-        await SecureStorage.storeUser(mockUser);
-        await SecureStorage.storeTokens(
-          accessToken: 'mock_access_token',
-          refreshToken: 'mock_refresh_token',
-        );
-        
+      final user = await _authRepository.register(name, email, password);
+      if (user != null) {
         state = state.copyWith(
-          currentUser: mockUser.toDomainEntity(), // Use domain entity method
+          currentUser: user,
           isAuthenticated: true,
           isLoading: false,
         );
-        
         return true;
       }
       
@@ -162,23 +128,69 @@ class AuthNotifier extends StateNotifier<AuthState> {
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        error: e.toString(),
+        error: _extractErrorMessage(e),
       );
       return false;
     }
   }
 
   Future<void> logout() async {
-    await SecureStorage.clearAll();
-    state = const AuthState();
+    state = state.copyWith(isLoading: true);
+    
+    try {
+      await _authRepository.logout();
+    } catch (e) {
+      // Continue with logout even if API call fails
+    } finally {
+      state = const AuthState();
+    }
+  }
+
+  Future<bool> updateProfile({String? name, String? email}) async {
+    state = state.copyWith(isLoading: true, clearError: true);
+    
+    try {
+      final user = await _authRepository.updateProfile(name: name, email: email);
+      if (user != null) {
+        state = state.copyWith(
+          currentUser: user,
+          isLoading: false,
+        );
+        return true;
+      }
+      
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Profile update failed',
+      );
+      return false;
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: _extractErrorMessage(e),
+      );
+      return false;
+    }
   }
 
   void clearError() {
     state = state.copyWith(clearError: true);
   }
+
+  String _extractErrorMessage(dynamic error) {
+    if (error.toString().contains('Invalid email or password')) {
+      return 'Invalid email or password';
+    } else if (error.toString().contains('Email already exists')) {
+      return 'An account with this email already exists';
+    } else if (error.toString().contains('Network')) {
+      return 'Network error. Please check your connection.';
+    }
+    return 'An error occurred. Please try again.';
+  }
 }
 
 // Provider
 final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
-  return AuthNotifier();
+  final authRepository = ref.read(authRepositoryProvider);
+  return AuthNotifier(authRepository);
 });

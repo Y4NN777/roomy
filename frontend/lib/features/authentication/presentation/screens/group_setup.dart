@@ -1,29 +1,41 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_colors.dart';
-import '../../../groups/data/services/group_service.dart'; // Will be refactored later
+import '../../../../data/services/group_api_service.dart'; 
 import '../../../../shared/widgets/forms/custom_button.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../config/di/injection.dart';
+import '../../../../config/router/route_names.dart';
+
+
+final groupServiceProvider = Provider<GroupApiService>((ref) {
+  final apiClient = ref.read(apiClientProvider); // depends on how you build it
+  return GroupApiService(apiClient: apiClient);
+});
 
 /// Screen for users to join or create a group.
 /// Uses animations and modal bottom sheets for input.
-class GroupSetupPage extends StatefulWidget {
+class GroupSetupPage extends ConsumerStatefulWidget {
   const GroupSetupPage({super.key});
 
   @override
-  State<GroupSetupPage> createState() => _GroupSetupPageState();
+  ConsumerState<GroupSetupPage> createState() => _GroupSetupPageState();
 }
 
-class _GroupSetupPageState extends State<GroupSetupPage>
-    with TickerProviderStateMixin {
+class _GroupSetupPageState extends ConsumerState<GroupSetupPage>
+  with TickerProviderStateMixin {
   late AnimationController _fadeController;
   late AnimationController _slideController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
 
-  final GroupService _groupService = GroupService();
+  late final GroupApiService _groupService;
 
   @override
   void initState() {
     super.initState();
+
+    _groupService = ref.read(groupServiceProvider);
 
     _fadeController = AnimationController(
       duration: const Duration(milliseconds: 1200),
@@ -306,17 +318,18 @@ class _GroupSetupPageState extends State<GroupSetupPage>
                     _showSnackBar('Please enter a group name');
                     return;
                   }
-                  final success = await _groupService.createGroup(
-                    groupNameController.text,
-                    groupDescriptionController.text.isEmpty
+
+                  final group = await _groupService.createGroup(
+                    name: groupNameController.text,
+                    description: groupDescriptionController.text.isEmpty
                         ? null
                         : groupDescriptionController.text,
                   );
-                  if (success) {
-                    Navigator.pop(context);
+
+                  await Future.delayed(const Duration(milliseconds: 500));{
+                     if (context.mounted){
                     _navigateToMainApp();
-                  } else {
-                    _showSnackBar('Failed to create group. Please try again.');
+                     }
                   }
                 },
                 backgroundColor: AppColors.primaryOrange,
@@ -328,6 +341,7 @@ class _GroupSetupPageState extends State<GroupSetupPage>
       ),
     );
   }
+
 
   void _showJoinGroupModal() {
     final groupCodeController = TextEditingController();
@@ -444,11 +458,11 @@ class _GroupSetupPageState extends State<GroupSetupPage>
                     _showSnackBar('Please enter a group code');
                     return;
                   }
-                  final success = await _groupService.joinGroup(groupCodeController.text);
-                  if (success) {
-                    Navigator.pop(context);
+                  final group = await _groupService.joinGroup(groupCode: groupCodeController.text);
+                  Future.delayed(const Duration(milliseconds: 500));
+                    if (mounted) {
                     _navigateToMainApp();
-                  } else {
+                    } else {
                     _showSnackBar('Failed to join group. Please try again.');
                   }
                 },
@@ -555,7 +569,7 @@ class _GroupSetupPageState extends State<GroupSetupPage>
     // Navigate to main app after a short delay
     Future.delayed(const Duration(milliseconds: 1500), () {
       if (mounted) {
-        Navigator.pushReplacementNamed(context, '/main');
+        context.go(RouteNames.dashboard);
       }
     });
   }

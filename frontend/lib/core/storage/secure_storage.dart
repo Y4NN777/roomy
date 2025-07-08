@@ -3,11 +3,11 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../data/models/user_model.dart';
 
 class SecureStorage {
-  static final _storage = FlutterSecureStorage(
-    aOptions: const AndroidOptions(
+  static const _storage = FlutterSecureStorage(
+    aOptions: AndroidOptions(
       encryptedSharedPreferences: true,
     ),
-    iOptions: const IOSOptions(
+    iOptions:  IOSOptions(
       accessibility: KeychainAccessibility.first_unlock_this_device,
     ),
   );

@@ -1,3 +1,5 @@
+import 'package:dio/dio.dart';
+
 /// Base exception class for the application
 abstract class AppException implements Exception {
   final String message;
@@ -20,6 +22,16 @@ class ServerException extends AppException {
   final int? statusCode;
   
   const ServerException(super.message, {this.statusCode, super.code, super.originalError});
+  factory ServerException.fromDioError(dynamic error) {
+    if (error is DioException) {
+      return ServerException(
+        error.message ?? 'Server error',
+        statusCode: error.response?.statusCode,
+        originalError: error,
+      );
+    }
+    return ServerException('Unknown server error', originalError: error);
+  }
 }
 
 /// Authentication related exceptions

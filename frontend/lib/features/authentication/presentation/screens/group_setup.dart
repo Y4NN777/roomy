@@ -319,7 +319,7 @@ class _GroupSetupPageState extends ConsumerState<GroupSetupPage>
                     return;
                   }
 
-                  final group = await _groupService.createGroup(
+                  await _groupService.createGroup(
                     name: groupNameController.text,
                     description: groupDescriptionController.text.isEmpty
                         ? null
@@ -458,7 +458,7 @@ class _GroupSetupPageState extends ConsumerState<GroupSetupPage>
                     _showSnackBar('Please enter a group code');
                     return;
                   }
-                  final group = await _groupService.joinGroup(groupCode: groupCodeController.text);
+                  await _groupService.joinGroup(groupCode: groupCodeController.text);
                   Future.delayed(const Duration(milliseconds: 500));
                     if (mounted) {
                     _navigateToMainApp();

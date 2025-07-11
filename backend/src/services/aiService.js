@@ -1,6 +1,6 @@
 // Handles all interactions with Google Generative AI (Gemini) for task creation from voice/text.
-const { GoogleGenerativeAI } = require('@google/genai');
-const { EventTypes } = require('../utils/eventTypes')
+import { EventTypes } from '../utils/eventTypes.js';
+import { GoogleGenAI } from '@google/genai';
 
 
 class AIService {
@@ -17,8 +17,9 @@ class AIService {
     }
     
     try {
-      this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-      this.model = this.genAI.getGenerativeModel({ 
+      this.genAI = new GoogleGenAI({});
+      console.log('GoogleGenerativeAI:', this.genAI);
+      this.model = this.genAI.models.get({ 
         model: 'gemini-2.0-flash-exp',
         generationConfig: {
           temperature: 0.7,
@@ -517,7 +518,6 @@ Process the input and return ONLY the JSON:`;
 
 
 
+const aiServiceInstance = new AIService();
 
-
-
-module.exports = new AIService();
+export default aiServiceInstance;

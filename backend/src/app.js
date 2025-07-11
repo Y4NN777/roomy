@@ -5,6 +5,7 @@ const morgan = require('morgan');
 const path = require('path');
 const http = require('http');
 const webSocketService = require('./services/notifications/WebSocketService');
+const { specs, swaggerUi } = require('../swagger/swagger');
 
 const routes = require('./routes');
 const errorHandler = require('./middleware/errorHandler');
@@ -58,6 +59,20 @@ app.get('/health', (req, res) => {
     version: process.env.API_VERSION || '1.0',
     environment: process.env.NODE_ENV || 'development',
   });
+});
+
+
+// Setting up Swagger UI to provide interactive API documentation at the '/api-docs' endpoint.
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, {
+  explorer: true,
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: "My API Documentation"
+}));
+
+// Swagger JSON endpoint for Postman import
+app.get('/api-docs.json', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.send(specs);
 });
 
 // Mounting the main application routes under the '/api' prefix.

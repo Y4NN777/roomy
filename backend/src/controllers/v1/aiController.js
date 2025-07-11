@@ -2,7 +2,6 @@ const aiService = require('../../services/aiService');
 const taskService = require('../../services/taskService');
 const groupService = require('../../services/groupService');
 const responseHelper = require('../../utils/responseHelper');
-const eventBus = require('../../utils/eventBus')
 const eventTypes = require('../../utils/eventTypes')
 const groupContextService = require('../../services/groupContextService');
 
@@ -132,6 +131,27 @@ class AIController {
       responseHelper.error(res, 'Failed to get AI status', 500);
     }
   }
+
+  // Handles task creation and confirmation from AI suggestions.
+  async handleConfirmAndCreateTasks(req, res) {
+    try {
+      const { tasks, originalText } = req.body;
+      const { id: userId, groupId } = req.user;
+
+      // Prepare context for task creation
+      const context = { userId, groupId, originalText };
+
+      // Call the confirmAndCreateTasks method with tasks and context
+      const createdTasks = await this.confirmAndCreateTasks(tasks, context);
+
+      // Send success response with created tasks
+      responseHelper.success(res, createdTasks, 'Tasks created successfully from AI suggestions');
+    } catch (error) {
+      console.error('Error confirming AI tasks:', error);
+      responseHelper.error(res, 'Failed to confirm and create tasks', 500);
+    }
+  }
+
 
 }
 

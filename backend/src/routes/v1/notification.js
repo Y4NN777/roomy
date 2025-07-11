@@ -2,7 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const notificationController = require('../../controllers/v1/notificationController');
-const authenticateToken = require('../../middleware/auth');
+const { authenticateToken } = require('../../middleware/auth');
 const { query, body, param } = require('express-validator');
 const validation = require('../../middleware/validation');
 

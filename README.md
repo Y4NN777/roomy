@@ -173,14 +173,92 @@ EMAIL_SERVICE_KEY=your-smtp-credentials
 
 ```
 roomy/
-├── mobile/                 # Flutter application
-│   ├── lib/features/      # Feature modules
-│   └── lib/shared/        # Shared components
-├── backend/               # Node.js API
-│   ├── src/controllers/   # Request handlers
-│   ├── src/services/      # Business logic
-│   └── src/models/        # Database schemas
-└── docs/                  # Documentation
+├── mobile/                      # Flutter Cross-Platform Application
+│   ├── lib/
+│   │   ├── features/           # Feature-based modular architecture
+│   │   │   ├── authentication/ # User authentication and security
+│   │   │   ├── group_management/ # Household group coordination
+│   │   │   ├── task_management/ # Task creation and tracking
+│   │   │   ├── calendar_view/   # Scheduling and timeline management
+│   │   │   ├── expense_tracking/ # Financial management system
+│   │   │   └── voice_assistant/ # AI-powered voice interface
+│   │   ├── shared/             # Reusable components and utilities
+│   │   │   ├── widgets/        # Common UI components
+│   │   │   ├── services/       # API and data services
+│   │   │   ├── models/         # Data models and DTOs
+│   │   │   └── utils/          # Helper functions and constants
+│   │   ├── core/               # Application foundation
+│   │   │   ├── config/         # App configuration and constants
+│   │   │   ├── theme/          # UI theme and styling
+│   │   │   └── routing/        # Navigation and route management
+│   │   └── main.dart           # Application entry point
+│   ├── test/                   # Testing suite
+│   │   ├── unit/               # Unit tests
+│   │   ├── widget/             # Widget tests
+│   │   └── integration/        # Integration tests
+│   ├── android/                # Android-specific configuration
+│   ├── ios/                    # iOS-specific configuration
+│   └── pubspec.yaml            # Dependencies and metadata
+│
+├── backend/                     # Node.js Enterprise API Server
+│   ├── src/
+│   │   ├── controllers/v1/     # HTTP request handlers (versioned)
+│   │   │   ├── auth.controller.js
+│   │   │   ├── groups.controller.js
+│   │   │   ├── tasks.controller.js
+│   │   │   ├── expenses.controller.js
+│   │   │   └── ai.controller.js
+│   │   ├── services/           # Business logic implementation
+│   │   │   ├── auth.service.js
+│   │   │   ├── groups.service.js
+│   │   │   ├── tasks.service.js
+│   │   │   ├── expenses.service.js
+│   │   │   └── ai.service.js
+│   │   ├── models/             # Database schema definitions
+│   │   │   ├── User.js
+│   │   │   ├── Group.js
+│   │   │   ├── Task.js
+│   │   │   └── Expense.js
+│   │   ├── routes/v1/          # API endpoint definitions (versioned)
+│   │   │   ├── auth.routes.js
+│   │   │   ├── groups.routes.js
+│   │   │   ├── tasks.routes.js
+│   │   │   ├── expenses.routes.js
+│   │   │   └── ai.routes.js
+│   │   ├── middleware/         # Request processing pipeline
+│   │   │   ├── auth.middleware.js
+│   │   │   ├── validation.middleware.js
+│   │   │   └── error.middleware.js
+│   │   ├── config/             # System configuration management
+│   │   │   ├── database.js
+│   │   │   ├── jwt.js
+│   │   │   └── ai.js
+│   │   └── utils/              # Shared utility functions
+│   │       ├── helpers.js
+│   │       ├── validators.js
+│   │       └── constants.js
+│   ├── tests/                  # Backend testing infrastructure
+│   │   ├── unit/               # Unit tests
+│   │   ├── integration/        # API integration tests
+│   │   └── fixtures/           # Test data and mocks
+│   ├── package.json            # Dependencies and scripts
+│   └── server.js               # Application bootstrap
+│
+├── docs/                       # Technical Documentation
+│   ├── API.md                  # Comprehensive API reference
+│   ├── ARCHITECTURE.md         # System design and architecture
+│   ├── DEPLOYMENT.md           # Production deployment guide
+│   ├── DEVELOPMENT.md          # Development setup and guidelines  
+│   ├── VOICE_AI.md             # AI voice processing documentation
+│   ├── DATABASE_SCHEMA.md      # Database design and relationships
+│   └── USER_GUIDE.md           # End-user documentation
+│
+└── config/                     # Development and deployment configuration
+    ├── docker-compose.yml      # Container orchestration
+    ├── .github/
+    │   └── workflows/          # CI/CD pipeline definitions
+    ├── deployment/             # Infrastructure configuration
+    └── .env.example            # Environment variables template
 ```
 
 ## Development

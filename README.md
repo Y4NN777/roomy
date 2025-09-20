@@ -61,7 +61,7 @@ Living with roommates creates predictable friction points:
 - **Voice Processing**: Flutter speech-to-text with noise cancellation
 - **Platform Integration**: Camera access, file system, background processing
 
-**Backend Services (Node.js + TypeScript)**
+**Backend Services (Node.js)**
 - **API Framework**: Express.js with helmet security middleware
 - **Architecture**: Service-oriented with dependency injection container
 - **Database**: MongoDB 6.0+ with Mongoose ODM and connection pooling

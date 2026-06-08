@@ -272,10 +272,31 @@ cd backend && npm test
 cd mobile && flutter test
 ```
 
-### Code Quality
-- ESLint + Prettier for backend
-- Flutter/Dart analyzer for mobile
-- Conventional commits
+---
+
+## 👥 Development Team
+
+### **Group 21 **
+
+| Team Member | Role | Scope and responsabilities | Contact |
+|-------------|------|----------------|---------|
+| **R Yanis Axel DABO** | Software Engineer | Backend Architecture & AI Integration | [@Y4NN](https://github.com/Y4NN777) |
+| **Rayane BICABA** | Software Engineer | Mobile Development & User Experience | [@Ryko](https://github.com/RayaneBICABA) |
+
+
+### **Academic Framework**
+
+- **Institution**: Burkina Insititute Of Technology
+- **Major**: Computer Science, Software Engineering 
+- **Course Integration**: Mobile Operating Systems & Frameworks + XML & Web Services
+- **Project Timeline**: July 29 - August 4, 2025 (Intensive Development Sprint)
+- **Methodology**: Agile development with pair programming and collaborative ownership
+
+### **Development Philosophy**
+
+Our team employs a collaborative full-stack approach where both developers contribute to all system components, ensuring comprehensive understanding, reduced knowledge silos, and enhanced code quality through continuous peer review.
+
+---
 
 ## Deployment
 
@@ -285,10 +306,27 @@ npm run build
 npm run deploy
 ```
 
-### Mobile
+### **Code Quality Standards**
+
+- **Backend**: ESLint with JavaScript(Node) Prettier formatting
+- **Mobile**: Flutter/Dart analyzer with custom linting rules
+- **Documentation**: Comprehensive inline documentation and external guides
+- **Version Control**: Conventional commit messages with semantic versioning
+
+---
+
+## 🚀 Deployment Architecture
+
+### **Production Environment**
+
 ```bash
-flutter build apk --release
-flutter build ios --release
+# Backend Deployment (Railway/Render)
+npm run build              # Compilation
+npm run deploy             # Production deployment
+
+# Mobile Application Build
+flutter build apk --release    # Android application package
+flutter build ios --release    # iOS application bundle (macOS required)
 ```
 
 ## Contributing
